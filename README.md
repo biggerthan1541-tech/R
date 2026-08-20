@@ -24,10 +24,9 @@ One of these blocks launch. The rest are live-but-improvable.
    "Book a Free Audit" button scrolls to the form. That works as-is. Paste a cal.com or
    Calendly URL there and all four CTAs switch to it. The same value is repeated in each
    `href` as a no-JS fallback, so find/replace `#contact` on the `data-book` links too.
-4. **Social profiles** (optional) — the footer has no social links, because none were
-   available when it was built. Add them back as `.footer__col` entries when the
-   accounts exist. They need full profile URLs (e.g. `https://instagram.com/<handle>`),
-   not display names — a handle cannot be derived from a person's name.
+4. **X / Twitter** (optional) — Instagram and LinkedIn are linked from the footer and
+   listed in the JSON-LD `sameAs`. No X account was supplied; add one in both places
+   if it exists.
 
 ## Files
 
@@ -49,7 +48,7 @@ netlify.toml        publish dir, security headers, cache policy
 | What | Where |
 |---|---|
 | Video | `data-embed` on `.video__facade` — replace `VIDEO_ID`. While it says `VIDEO_ID` the play button does nothing rather than loading a broken frame. |
-| Email | `.footer__col` and `.contact__alt` links, the `mailto:` in `assets/main.js` error messages, and `privacy.html`. |
+| Email and social links | `.footer__col` and `.contact__alt` links, the `mailto:` in `assets/main.js` error messages, and `privacy.html`. |
 
 ## Honesty constraints
 

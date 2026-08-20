@@ -379,6 +379,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .footer { border-top: 1px solid var(--line); padding-block: clamp(48px, 6vw, 72px) 32px; }
 .footer__inner { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; }
 .footer__tag { margin-top: 16px; max-width: min(320px, 100%); font-size: 15px; color: var(--muted); }
+.social { display: flex; gap: 8px; margin-top: 22px; }
+.social a { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); color: var(--ink-2); transition: color .18s ease, border-color .18s ease, background-color .18s ease; }
+.social a:hover { color: var(--accent); border-color: rgba(255,77,25,.35); background: var(--accent-soft); }
+
 .footer__col h3 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 14px; }
 .footer__col a { display: block; font-size: 15px; color: var(--ink-2); padding-block: 5px; transition: color .15s ease; }
 .footer__col a:hover { color: var(--accent); }
