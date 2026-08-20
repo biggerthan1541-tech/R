@@ -4,11 +4,9 @@
 // Swap in a cal.com or Calendly URL and every CTA follows.
 const BOOKING_URL = "#contact";
 
-// Formspree endpoint for the contact form. Create a free form at
-// https://formspree.io and paste its endpoint here (it looks like
-// https://formspree.io/f/abcdwxyz). Until then the form refuses to submit
-// and tells you why instead of silently losing enquiries.
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID";
+// Formspree endpoint for the contact form. Mirrored into the form's action
+// attribute in index.html as the no-JS fallback — change both.
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/myegojgn";
 
 document.querySelectorAll("[data-book]").forEach((el) => {
   el.href = BOOKING_URL;

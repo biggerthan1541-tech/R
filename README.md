@@ -9,22 +9,18 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 
 ## Before you go live
 
-One of these blocks launch. The rest are live-but-improvable.
+Nothing blocks launch. These are live-but-improvable.
 
-1. **Formspree endpoint** (blocker) — `FORMSPREE_ENDPOINT` in `assets/main.js`. Create a
-   free form at [formspree.io](https://formspree.io) and paste its URL
-   (`https://formspree.io/f/xxxxxxxx`). Until then the form refuses to submit and tells
-   the visitor to email instead, so no enquiry is silently lost.
-2. **Domain** — every absolute URL currently reads `your-domain.example`, a reserved TLD
+1. **Domain** — every absolute URL currently reads `your-domain.example`, a reserved TLD
    that can never resolve. It appears in the canonical tag, Open Graph and Twitter tags,
    JSON-LD, `robots.txt`, and `sitemap.xml`. Find/replace it with the real domain — or,
    once deployed, the `*.netlify.app` URL — or link previews will show no image and
    search engines will be told the page lives somewhere that does not exist.
-3. **Booking link** (optional) — `BOOKING_URL` in `assets/main.js` is `#contact`, so every
+2. **Booking link** (optional) — `BOOKING_URL` in `assets/main.js` is `#contact`, so every
    "Book a Free Audit" button scrolls to the form. That works as-is. Paste a cal.com or
    Calendly URL there and all four CTAs switch to it. The same value is repeated in each
    `href` as a no-JS fallback, so find/replace `#contact` on the `data-book` links too.
-4. **X / Twitter** (optional) — Instagram and LinkedIn are linked from the footer and
+3. **X / Twitter** (optional) — Instagram and LinkedIn are linked from the footer and
    listed in the JSON-LD `sameAs`. No X account was supplied; add one in both places
    if it exists.
 
@@ -44,6 +40,10 @@ netlify.toml        publish dir, security headers, cache policy
 ```
 
 ## Swapping the placeholder content
+
+The contact form is wired to `https://formspree.io/f/myegojgn`. Confirm the first
+submission in your inbox — Formspree emails a one-time confirmation link that must be
+clicked before it starts delivering.
 
 | What | Where |
 |---|---|
