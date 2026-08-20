@@ -9,19 +9,25 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 
 ## Before you go live
 
-Four things must be changed or the site ships broken. Everything else is cosmetic.
+Two of these block launch. The rest are live-but-improvable.
 
-1. **Your name** — the hero says `[YOUR NAME]`. Search `index.html` for it.
-2. **Formspree endpoint** — `FORMSPREE_ENDPOINT` in `assets/main.js`. Create a free form
-   at [formspree.io](https://formspree.io) and paste its URL (`https://formspree.io/f/xxxxxxxx`).
-   Until you do, the form refuses to submit and shows the visitor an error telling them
-   to email instead, so no enquiry is silently lost.
-3. **Booking URL** — `BOOKING_URL` in `assets/main.js`, used by every "Book a Free Audit"
-   button. The same URL is hard-coded in each `href` as a no-JS fallback, so also
-   find/replace `cal.com/scrollstop-media/free-audit`.
-4. **Domain** — `scrollstopmedia.com` appears in the canonical URL, Open Graph and Twitter
-   tags, JSON-LD, `robots.txt`, and `sitemap.xml`. Find/replace it with your real domain
-   or link previews and search listings will point at the wrong place.
+1. **Your name** (blocker) — the hero reads `I'm [YOUR NAME]`. Search `index.html`.
+2. **Formspree endpoint** (blocker) — `FORMSPREE_ENDPOINT` in `assets/main.js`. Create a
+   free form at [formspree.io](https://formspree.io) and paste its URL
+   (`https://formspree.io/f/xxxxxxxx`). Until then the form refuses to submit and tells
+   the visitor to email instead, so no enquiry is silently lost.
+3. **Domain** — every absolute URL currently reads `your-domain.example`, a reserved TLD
+   that can never resolve. It appears in the canonical tag, Open Graph and Twitter tags,
+   JSON-LD, `robots.txt`, and `sitemap.xml`. Find/replace it with the real domain — or,
+   once deployed, the `*.netlify.app` URL — or link previews will show no image and
+   search engines will be told the page lives somewhere that does not exist.
+4. **Booking link** (optional) — `BOOKING_URL` in `assets/main.js` is `#contact`, so every
+   "Book a Free Audit" button scrolls to the form. That works as-is. Paste a cal.com or
+   Calendly URL there and all four CTAs switch to it. The same value is repeated in each
+   `href` as a no-JS fallback, so find/replace `#contact` on the `data-book` links too.
+5. **Social profiles** (optional) — the footer has no social links, because none were
+   available when it was built. Add them back as `.footer__col` entries when the
+   accounts exist.
 
 ## Files
 
@@ -43,8 +49,7 @@ netlify.toml        publish dir, security headers, cache policy
 | What | Where |
 |---|---|
 | Video | `data-embed` on `.video__facade` — replace `VIDEO_ID`. While it says `VIDEO_ID` the play button does nothing rather than loading a broken frame. |
-| Email / social | `.footer__col` links, the `mailto:` in `assets/main.js` error messages, and `privacy.html`. |
-| Business details | The bracketed `[...]` notes in `privacy.html` — registered name and postal address. |
+| Email | `.footer__col` and `.contact__alt` links, the `mailto:` in `assets/main.js` error messages, and `privacy.html`. |
 
 ## Honesty constraints
 

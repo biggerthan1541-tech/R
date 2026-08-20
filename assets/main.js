@@ -1,6 +1,8 @@
 // ── Config ─────────────────────────────────────────────────────────────
-// Booking link used by every CTA on the page.
-const BOOKING_URL = "https://cal.com/scrollstop-media/free-audit";
+// Destination for every "Book a Free Audit" CTA. Until there is a calendar to
+// book, these point at the contact form, which is a real working destination.
+// Swap in a cal.com or Calendly URL and every CTA follows.
+const BOOKING_URL = "#contact";
 
 // Formspree endpoint for the contact form. Create a free form at
 // https://formspree.io and paste its endpoint here (it looks like
@@ -132,7 +134,7 @@ form.addEventListener("submit", async (e) => {
 
   if (FORMSPREE_ENDPOINT.includes("YOUR_FORM_ID")) {
     setStatus(
-      "This form isn't connected yet. Add your Formspree endpoint to <code>assets/main.js</code> — meanwhile, email <a href=\"mailto:hello@scrollstopmedia.com\">hello@scrollstopmedia.com</a>.",
+      "This form isn't connected yet. Add your Formspree endpoint to <code>assets/main.js</code> — meanwhile, email <a href=\"mailto:robemma4278@gmail.com\">robemma4278@gmail.com</a>.",
       "error"
     );
     return;
@@ -162,13 +164,13 @@ form.addEventListener("submit", async (e) => {
       const detail = data?.errors?.map((err) => err.message).join(" ");
       setStatus(
         detail ||
-          'Something went wrong sending that. Please email <a href="mailto:hello@scrollstopmedia.com">hello@scrollstopmedia.com</a> instead.',
+          'Something went wrong sending that. Please email <a href="mailto:robemma4278@gmail.com">robemma4278@gmail.com</a> instead.',
         "error"
       );
     }
   } catch {
     setStatus(
-      'Couldn\'t reach the server — check your connection, or email <a href="mailto:hello@scrollstopmedia.com">hello@scrollstopmedia.com</a>.',
+      'Couldn\'t reach the server — check your connection, or email <a href="mailto:robemma4278@gmail.com">robemma4278@gmail.com</a>.',
       "error"
     );
   } finally {

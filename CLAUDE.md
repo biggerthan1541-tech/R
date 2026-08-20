@@ -165,8 +165,10 @@ R/
 - Two config constants sit at the top of `assets/main.js`: `BOOKING_URL` and
   `FORMSPREE_ENDPOINT`. Both ship with placeholders that fail loudly rather than
   silently — keep that property when editing.
-- The domain `scrollstopmedia.com` is referenced in canonical/OG/JSON-LD/robots/sitemap.
-  Changing it means changing all five.
+- Absolute URLs use the placeholder `your-domain.example` (RFC 2606 reserved, never
+  resolves) in canonical/OG/JSON-LD/robots/sitemap. Changing it means changing all five.
+- `BOOKING_URL` is `#contact` until a real calendar exists, so CTAs scroll to the form
+  rather than pointing at a dead external link.
 
 ---
 
