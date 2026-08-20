@@ -6,7 +6,9 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository holds the **Scrollstop Media** landing page — a single-page, conversion-focused marketing site for a Meta (Facebook & Instagram) ads service provider.
+
+Stack: **plain HTML, CSS, and vanilla JS**. No build step, no framework, no dependencies. Keep it that way unless there is a concrete reason not to — the page's selling point is that it is fast and trivially editable.
 
 ---
 
@@ -108,16 +110,14 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 > To be filled in once the project has a build system and test runner.
 
+No dependencies and no test suite — the site is static.
+
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
-
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+# Serve locally
+python3 -m http.server 8000   # http://localhost:8000
 ```
+
+Verify changes by loading the page at mobile (390px) and desktop (1440px) widths.
 
 ---
 
@@ -127,9 +127,22 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md         ← this file
+├── README.md         ← content-swap guide for the landing page
+├── index.html        ← all page markup (nav, hero, process, services, stats, testimonials, CTA, footer)
+└── assets/
+    ├── styles.css    ← design tokens in `:root` + all styling
+    └── main.js       ← CTA links, mobile menu, video embed, scroll reveals, stat count-up
 ```
+
+**Landing page conventions**
+
+- Every CTA points at one booking URL: `BOOKING_URL` in `assets/main.js`, mirrored into each
+  `href` as a no-JS fallback. Change both.
+- Colors, spacing, radii, and shadows live as custom properties in `:root`. Do not hard-code
+  new values further down the sheet.
+- Icons are inline SVG. No icon fonts, no image requests.
+- Anything animated must be neutralized under `prefers-reduced-motion: reduce`.
 
 ---
 
