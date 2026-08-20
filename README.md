@@ -9,25 +9,25 @@ python3 -m http.server 8000   # then visit http://localhost:8000
 
 ## Before you go live
 
-Two of these block launch. The rest are live-but-improvable.
+One of these blocks launch. The rest are live-but-improvable.
 
-1. **Your name** (blocker) — the hero reads `I'm [YOUR NAME]`. Search `index.html`.
-2. **Formspree endpoint** (blocker) — `FORMSPREE_ENDPOINT` in `assets/main.js`. Create a
+1. **Formspree endpoint** (blocker) — `FORMSPREE_ENDPOINT` in `assets/main.js`. Create a
    free form at [formspree.io](https://formspree.io) and paste its URL
    (`https://formspree.io/f/xxxxxxxx`). Until then the form refuses to submit and tells
    the visitor to email instead, so no enquiry is silently lost.
-3. **Domain** — every absolute URL currently reads `your-domain.example`, a reserved TLD
+2. **Domain** — every absolute URL currently reads `your-domain.example`, a reserved TLD
    that can never resolve. It appears in the canonical tag, Open Graph and Twitter tags,
    JSON-LD, `robots.txt`, and `sitemap.xml`. Find/replace it with the real domain — or,
    once deployed, the `*.netlify.app` URL — or link previews will show no image and
    search engines will be told the page lives somewhere that does not exist.
-4. **Booking link** (optional) — `BOOKING_URL` in `assets/main.js` is `#contact`, so every
+3. **Booking link** (optional) — `BOOKING_URL` in `assets/main.js` is `#contact`, so every
    "Book a Free Audit" button scrolls to the form. That works as-is. Paste a cal.com or
    Calendly URL there and all four CTAs switch to it. The same value is repeated in each
    `href` as a no-JS fallback, so find/replace `#contact` on the `data-book` links too.
-5. **Social profiles** (optional) — the footer has no social links, because none were
+4. **Social profiles** (optional) — the footer has no social links, because none were
    available when it was built. Add them back as `.footer__col` entries when the
-   accounts exist.
+   accounts exist. They need full profile URLs (e.g. `https://instagram.com/<handle>`),
+   not display names — a handle cannot be derived from a person's name.
 
 ## Files
 
