@@ -129,14 +129,14 @@ Verify changes by loading the page at mobile (390px) and desktop (1440px) widths
 R/
 ├── CLAUDE.md         ← this file
 ├── README.md         ← content-swap guide for the landing page
-├── index.html        ← landing page (nav, hero, process, services, stats, testimonials, contact, CTA, footer)
+├── index.html        ← landing page (nav, hero, process, services, founding offer, why-now, contact, CTA, footer)
 ├── privacy.html      ← privacy policy
 ├── robots.txt        ← crawler rules + sitemap pointer
 ├── sitemap.xml       ← both pages
 ├── netlify.toml      ← publish dir, security headers, cache policy
 └── assets/
     ├── styles.css    ← design tokens in `:root` + all styling
-    ├── main.js       ← config, CTAs, mobile menu, video, reveals, stat count-up, contact form
+    ├── main.js       ← config, CTAs, mobile menu, video, scroll reveals, contact form
     ├── og-image.png  ← 1200x630 social share card
     ├── favicon.svg
     ├── apple-touch-icon.png
@@ -157,6 +157,10 @@ R/
 - Inter ships as a variable woff2 per unicode subset. Characters outside its subsets
   (e.g. U+2190 ←) silently fall back — use inline SVG for glyph-like icons.
 - Anything animated must be neutralized under `prefers-reduced-motion: reduce`.
+- **The site makes no claims about past results.** The founder has no clients yet, so
+  there are no stats, no testimonials, and no client count anywhere — by explicit
+  instruction, not oversight. Do not add social proof, sample metrics, or placeholder
+  quotes, even as filler; positioning runs on method and the founding-client offer.
 - Deploy target is Netlify; `netlify.toml` owns headers and caching.
 - Two config constants sit at the top of `assets/main.js`: `BOOKING_URL` and
   `FORMSPREE_ENDPOINT`. Both ship with placeholders that fail loudly rather than

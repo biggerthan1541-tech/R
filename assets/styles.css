@@ -195,23 +195,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .hero__cta { margin-top: 34px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .trust { font-size: 14px; color: var(--muted); }
 
-.proof { margin-top: 40px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center; }
-.proof__text { font-size: 14.5px; color: var(--muted); }
-.proof__text strong { color: var(--ink); font-weight: 600; }
-
-.avatars { display: flex; }
-.avatar {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: var(--a, #ddd);
-  border: 2px solid var(--bg);
-  display: grid; place-items: center;
-  font-size: 12.5px; font-weight: 700; letter-spacing: .02em; color: rgba(11,12,14,.62);
-  flex: none;
-}
-.avatars .avatar + .avatar { margin-left: -12px; }
-.avatar::after { content: attr(data-initials); }
-.avatar--lg { width: 44px; height: 44px; font-size: 14px; border-color: transparent; }
-
 /* Video facade */
 .video { margin-top: clamp(44px, 6vw, 72px); width: 100%; max-width: 900px; }
 .video__facade {
@@ -260,30 +243,40 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 }
 .feature__icon svg { stroke: currentColor; }
 
-/* ── Stats band ─────────────────────────────────────────── */
-.stats {
+/* ── Founding client offer ──────────────────────────────── */
+.founding {
   background: var(--ink);
   color: rgba(255,255,255,.68);
   padding-block: var(--section-y);
   background-image: radial-gradient(60% 90% at 85% 0%, rgba(255,77,25,.18), transparent 65%);
 }
-.stats .section__head { margin-inline: auto; text-align: center; max-width: 620px; }
-.stats__grid { gap: clamp(20px, 2.4vw, 32px); }
-.stat { text-align: center; padding: clamp(20px, 2.4vw, 30px) 14px; border-radius: var(--radius); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
-.stat__num {
-  display: block; font-size: clamp(38px, 5.4vw, 58px); font-weight: 800; letter-spacing: -.045em;
-  color: #fff; line-height: 1; font-variant-numeric: tabular-nums;
-}
-.stat__label { display: block; margin-top: 12px; font-size: 14.5px; color: rgba(255,255,255,.6); }
-.stats__note { margin-top: 28px; text-align: center; font-size: 13px; color: rgba(255,255,255,.38); }
+.founding__grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(36px, 5vw, 72px); align-items: start; }
+@media (max-width: 900px) { .founding__grid { grid-template-columns: 1fr; } }
+.founding__lede { margin-top: 20px; font-size: clamp(16.5px, 1.9vw, 18.5px); color: rgba(255,255,255,.72); max-width: 48ch; }
+.founding .btn { margin-top: 32px; }
+.trust--light { margin-top: 14px; color: rgba(255,255,255,.45); }
 
-/* ── Testimonials ───────────────────────────────────────── */
-.quote { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
-.quote__text { font-size: 16.5px; color: var(--ink); line-height: 1.55; letter-spacing: -.01em; }
-.person { display: flex; align-items: center; gap: 12px; }
-.person span:last-child { display: flex; flex-direction: column; line-height: 1.35; }
-.person strong { font-size: 15px; font-weight: 600; color: var(--ink); }
-.person em { font-style: normal; font-size: 13.5px; color: var(--muted); }
+.founding__deal { display: flex; flex-direction: column; gap: 22px; }
+.deal { padding: clamp(22px, 2.4vw, 28px); border-radius: var(--radius); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); }
+.deal__title { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: #ff8f6b; font-weight: 700; margin-bottom: 16px; }
+
+/* ── Founding flag ──────────────────────────────────────── */
+.flag {
+  display: inline-flex; align-items: center; gap: 9px; margin-top: 38px;
+  font-size: 14.5px; font-weight: 600; color: var(--ink);
+  background: var(--accent-soft); border: 1px solid rgba(255,77,25,.20);
+  padding: 9px 18px 9px 14px; border-radius: 999px;
+}
+.flag--center { margin-top: 30px; }
+.flag__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 0 rgba(255,77,25,.55); animation: flag-pulse 2.4s ease-out infinite; }
+@keyframes flag-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,77,25,.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(255,77,25,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,77,25,0); }
+}
+
+/* ── Why work with someone new ──────────────────────────── */
+.reasons .card__text { margin-top: 12px; }
 
 /* ── Final CTA ──────────────────────────────────────────── */
 
@@ -300,9 +293,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .cta__sub { margin-top: 16px; font-size: clamp(17px, 2vw, 19px); color: var(--muted); }
 .cta .btn { margin-top: 32px; }
 .cta .trust { margin-top: 14px; }
-.proof--center { margin-top: 34px; justify-content: center; }
-.cta .avatar { border-color: var(--bg-alt); }
-
+.cta 
 
 /* ── Contact form ───────────────────────────────────────── */
 .contact { display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(32px, 5vw, 72px); align-items: start; }
@@ -317,6 +308,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   content: ""; position: absolute; left: 0; top: 4px; width: 19px; height: 19px; border-radius: 50%;
   background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff4d19' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center / 12px no-repeat;
 }
+.ticks--light li { color: rgba(255,255,255,.74); }
+.ticks--light li::before {
+  background: rgba(255,143,107,.14) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff8f6b' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+
 .contact__alt { margin-top: 28px; font-size: 15px; color: var(--muted); }
 .contact__alt a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,77,25,.45); }
 .contact__alt a:hover { color: var(--accent); }

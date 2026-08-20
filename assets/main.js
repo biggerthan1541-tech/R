@@ -55,8 +55,6 @@ facade.addEventListener("click", () => {
   facade.replaceWith(iframe);
 });
 
-const motionOK = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 // Reveal on scroll
 const revealer = new IntersectionObserver(
   (entries) => {
@@ -69,36 +67,6 @@ const revealer = new IntersectionObserver(
   { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
 );
 document.querySelectorAll(".reveal").forEach((el) => revealer.observe(el));
-
-// Stat count-up
-const format = (el, value) => {
-  const decimals = Number(el.dataset.decimals || 0);
-  return (el.dataset.prefix || "") + value.toFixed(decimals) + (el.dataset.suffix || "");
-};
-
-const counter = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      const el = entry.target;
-      counter.unobserve(el);
-      if (!motionOK) return;
-
-      const target = Number(el.dataset.count);
-      const duration = 1100;
-      const start = performance.now();
-      const tick = (now) => {
-        const p = Math.min((now - start) / duration, 1);
-        const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = format(el, target * eased);
-        if (p < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-  },
-  { threshold: 0.5 }
-);
-document.querySelectorAll("[data-count]").forEach((el) => counter.observe(el));
 
 // ── Contact form ───────────────────────────────────────────────────────
 const form = document.getElementById("audit-form");
