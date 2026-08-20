@@ -31,6 +31,7 @@ assets/styles.css   design tokens + all styling
 assets/main.js      config, CTAs, mobile menu, video, reveals, stat count-up, form
 assets/og-image.png 1200x630 social share card
 assets/favicon.svg  browser icon
+assets/fonts/       self-hosted Inter (woff2) + its OFL licence
 robots.txt          crawler rules + sitemap pointer
 sitemap.xml         both pages
 netlify.toml        publish dir, security headers, cache policy
@@ -51,9 +52,10 @@ netlify.toml        publish dir, security headers, cache policy
 ## Notes
 
 - Mobile-first; verified with no horizontal overflow from 320px up.
-- One webfont (Inter) from Google Fonts, with a system fallback stack. This sends
-  visitor IPs to Google and is disclosed in the privacy policy; the font can be
-  self-hosted instead if you would rather it did not.
+- Inter is self-hosted from `assets/fonts/` — one variable file per subset covering
+  weights 400-800, with a system fallback stack. The page makes no third-party
+  requests at all, so no visitor IP reaches Google or any other outside service.
+  The font is SIL OFL 1.1 licensed; `assets/fonts/OFL.txt` must ship with it.
 - The form validates on submit, then re-validates a field as you fix it. Success and
   error states are announced via `aria-live`.
 - A honeypot field (`_gotcha`) catches basic spam bots; Formspree also does its own filtering.

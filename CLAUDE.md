@@ -139,7 +139,8 @@ R/
     ├── main.js       ← config, CTAs, mobile menu, video, reveals, stat count-up, contact form
     ├── og-image.png  ← 1200x630 social share card
     ├── favicon.svg
-    └── apple-touch-icon.png
+    ├── apple-touch-icon.png
+    └── fonts/        ← self-hosted Inter (variable woff2) + OFL.txt
 ```
 
 **Landing page conventions**
@@ -149,6 +150,12 @@ R/
 - Colors, spacing, radii, and shadows live as custom properties in `:root`. Do not hard-code
   new values further down the sheet.
 - Icons are inline SVG. No icon fonts, no image requests.
+- The site makes **zero third-party requests** — fonts are self-hosted. Keep it that
+  way: adding a CDN, webfont host, or analytics script reintroduces a data transfer
+  the privacy policy currently states does not happen, so the policy must change in
+  the same commit.
+- Inter ships as a variable woff2 per unicode subset. Characters outside its subsets
+  (e.g. U+2190 ←) silently fall back — use inline SVG for glyph-like icons.
 - Anything animated must be neutralized under `prefers-reduced-motion: reduce`.
 - Deploy target is Netlify; `netlify.toml` owns headers and caching.
 - Two config constants sit at the top of `assets/main.js`: `BOOKING_URL` and

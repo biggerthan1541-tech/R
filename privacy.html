@@ -10,9 +10,7 @@
 <meta name="theme-color" content="#0b0c0e">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -30,7 +28,10 @@
 </header>
 
 <main class="wrap legal">
-  <a class="back" href="index.html">← Back to site</a>
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Back to site
+  </a>
 
   <h1>Privacy Policy</h1>
   <p class="updated">Last updated: 20 August 2026</p>
@@ -56,10 +57,9 @@
   <ul>
     <li><strong>Formspree</strong> — the service that delivers the contact form to my inbox. Your submission passes through and is stored on their servers in the United States. See the <a href="https://formspree.io/legal/privacy-policy/" rel="noopener">Formspree privacy policy</a>.</li>
     <li><strong>Netlify</strong> — the host that serves this website and keeps standard access logs. See the <a href="https://www.netlify.com/privacy/" rel="noopener">Netlify privacy policy</a>.</li>
-    <li><strong>Google Fonts</strong> — the typeface on this site is loaded from Google's servers, which means your IP address is visible to Google when the page loads. See the <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a>. If you would rather this did not happen, the font can be served from this site instead.</li>
     <li><strong>My email provider</strong> — because your message ends up in my inbox.</li>
   </ul>
-  <p>That is the complete list. There is no analytics, no advertising pixel, and no tracking script on this website.</p>
+  <p>That is the complete list. There is no analytics, no advertising pixel, and no tracking script on this website. Fonts and images are served from this site itself, so loading a page does not tell any third party that you visited.</p>
 
   <h2>Cookies</h2>
   <p>This site sets no cookies of its own, and there is no analytics or advertising tracking. Because nothing non-essential is stored on your device, there is no cookie banner to click through.</p>
