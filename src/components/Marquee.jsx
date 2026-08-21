@@ -31,7 +31,7 @@ export default function Marquee() {
           className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:repeating-linear-gradient(0deg,transparent_0_2px,#0b0b0b_2px_3px)]"
         />
         <div className="animate-marquee flex w-max motion-reduce:animate-none">
-          <div className="flex shrink-0 items-center" aria-hidden="false">
+          <div className="flex shrink-0 items-center">
             <Row />
           </div>
           <div className="flex shrink-0 items-center" aria-hidden="true">

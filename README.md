@@ -47,8 +47,7 @@ src/
 ├── fonts.css               generated @font-face rules
 ├── data/catalog.js         all dummy content (nav, products, terrain, perks…)
 ├── hooks/
-│   ├── useReveal.js        IntersectionObserver fade/slide-in
-│   └── useMediaQuery.js
+│   └── useReveal.js        IntersectionObserver fade/slide-in
 └── components/
     ├── PromoBar.jsx        slim announcement bar
     ├── Nav.jsx             sticky nav + mobile drawer
@@ -66,6 +65,9 @@ src/
     └── Icons.jsx
 ```
 
+`public/og-image.png` is the social preview card (1200×630), generated from the
+page's own type and palette.
+
 ## Accessibility notes
 
 - Skip link is the first focusable element; visible 3px `signal` focus ring
@@ -81,3 +83,15 @@ src/
   and collapses every transition; the scroll reveals resolve to visible
   immediately rather than leaving content hidden.
 - Anchor targets carry `scroll-mt` so they clear the sticky nav.
+
+Verified on the production bundle at 360/390/768/1024/1280/1440/1920: no
+horizontal overflow, no console errors, no failed requests, every scroll reveal
+resolving to visible, and every interactive control carrying an accessible name.
+
+## Responsive notes
+
+The hero goes two-column at `xl`, not `lg`. Between 1024 and 1279 the art
+column is too narrow for the floating spec stats to clear the shoe and the CTAs
+wrap mid-phrase, so that range keeps the single-column stack. Below `sm` the
+stats drop out of the overlay entirely and sit in a three-up row beneath the
+shoe.

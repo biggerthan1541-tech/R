@@ -34,7 +34,7 @@ export default function Hero() {
     >
       <SpeedStreaks />
 
-      <div className="relative mx-auto grid w-full max-w-[1600px] grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:px-10 lg:py-20">
+      <div className="relative mx-auto grid w-full max-w-[1600px] grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 lg:px-10 lg:py-20 xl:grid-cols-[1.05fr_1fr] xl:gap-8">
         <div
           ref={copy.ref}
           style={copy.style}
@@ -50,7 +50,7 @@ export default function Hero() {
 
           <h1
             id="hero-heading"
-            className="display mt-5 text-[clamp(3rem,13vw,5.5rem)] lg:text-[min(7vw,8.5rem)]"
+            className="display mt-5 text-[clamp(3rem,13vw,5.5rem)] xl:text-[min(7vw,8.5rem)]"
           >
             Outrun
             <br />
@@ -65,14 +65,14 @@ export default function Hero() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a
               href="#lineup"
-              className="group inline-flex items-center justify-center gap-3 bg-signal px-8 py-4 text-sm font-bold tracking-[0.14em] text-ink uppercase transition-colors hover:bg-ink hover:text-paper"
+              className="group inline-flex items-center justify-center gap-3 bg-signal px-8 py-4 whitespace-nowrap text-sm font-bold tracking-[0.14em] text-ink uppercase transition-colors hover:bg-ink hover:text-paper"
             >
               Shop the drop
               <ArrowIcon className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
             </a>
             <a
               href="#tech"
-              className="inline-flex items-center justify-center border-2 border-ink px-8 py-4 text-sm font-bold tracking-[0.14em] uppercase transition-colors hover:bg-ink hover:text-paper"
+              className="inline-flex items-center justify-center border-2 border-ink px-8 py-4 whitespace-nowrap text-sm font-bold tracking-[0.14em] uppercase transition-colors hover:bg-ink hover:text-paper"
             >
               Explore the tech
             </a>
@@ -91,7 +91,7 @@ export default function Hero() {
             />
             <ShoeArt
               variant="hero"
-              className="absolute inset-x-0 top-1/2 h-[74%] w-full -translate-y-1/2"
+              className="absolute inset-x-0 top-[46%] h-[72%] w-full -translate-y-1/2"
             />
           </div>
 

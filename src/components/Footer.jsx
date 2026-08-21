@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { footerColumns } from "../data/catalog";
 import {
   ArrowIcon,
@@ -15,6 +16,8 @@ const socials = [
 ];
 
 export default function Footer() {
+  const [subscribed, setSubscribed] = useState(false);
+
   return (
     <footer id="footer" className="bg-ink text-paper">
       <div className="mx-auto max-w-[1600px] px-4 pt-16 pb-10 sm:px-6 lg:px-10 lg:pt-20">
@@ -30,7 +33,10 @@ export default function Footer() {
 
             <form
               className="mt-8 max-w-sm"
-              onSubmit={(event) => event.preventDefault()}
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSubscribed(true);
+              }}
             >
               <label
                 htmlFor="newsletter"
@@ -56,6 +62,14 @@ export default function Footer() {
                   <ArrowIcon className="size-5" />
                 </button>
               </div>
+              <p
+                role="status"
+                className={`mt-3 text-xs text-signal transition-opacity ${
+                  subscribed ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                {subscribed ? "You are on the list. Drop 04 lands Friday." : "\u00a0"}
+              </p>
             </form>
           </div>
 
