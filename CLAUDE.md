@@ -6,7 +6,13 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository (`biggerthan1541-tech/R`) holds **VELO** — a marketing landing
+page for a fictional performance running brand, built with React 19, Vite 7 and
+Tailwind CSS v4. See `README.md` for the design tokens, component map and
+accessibility notes.
+
+Everything visual is drawn in SVG/CSS and all catalogue content is dummy data;
+no real brand marks, slogans or product imagery are used. Keep it that way.
 
 ---
 
@@ -25,7 +31,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/velo-ecommerce-landing-9oa7g7` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -84,6 +90,13 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 > These are defaults. Override them in this file once the project has an established stack.
 
+### Stack
+- React 19 function components, no state library — page-level content lives in `src/data/catalog.js`.
+- Tailwind CSS v4, configured CSS-first in `src/index.css` via `@theme`. There is no `tailwind.config.js`.
+- Colour, font and animation tokens are theme variables; use the token utilities (`bg-signal`, `text-ink`, `font-display`) rather than raw hex.
+- Fonts are self-hosted in `public/fonts` with generated `@font-face` rules in `src/fonts.css`. Do not add a Google Fonts `<link>`.
+- ESLint flat config; Prettier for formatting (`npx prettier --write "src/**/*.{jsx,css}"`).
+
 ### Code Style
 - No comments unless the *why* is non-obvious (a subtle invariant, a workaround, a hidden constraint).
 - No docstrings beyond a single short line where required by tooling.
@@ -92,6 +105,14 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 ### Error Handling
 - Validate only at system boundaries (user input, external APIs). Trust framework/internal guarantees.
 - Do not add fallbacks for scenarios that cannot happen.
+
+### Accessibility
+Treat these as requirements, not nice-to-haves:
+- Every icon-only control needs an `aria-label`; decorative SVG needs `aria-hidden`.
+- Keep the heading outline intact (one `h1`, section `h2`s, item `h3`s).
+- Orange text on white must use `text-signal-ink` (`#D93000`), not `text-signal` — the brand orange is only 3.6:1 on white.
+- Honour `prefers-reduced-motion`: scroll reveals must resolve to *visible*, never leave content hidden.
+- New anchor targets need `scroll-mt-16 sm:scroll-mt-[72px]` to clear the sticky nav.
 
 ### Security
 - No command injection, XSS, SQL injection, or other OWASP Top 10 issues.
@@ -109,15 +130,18 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 > To be filled in once the project has a build system and test runner.
 
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+npm install
 
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+npm run dev      # Vite dev server on :5173
+npm run build    # production bundle in dist/
+npm run preview  # serve the production bundle
+npm run lint     # ESLint
 ```
+
+There is no test runner yet. Verify changes visually: run the dev server and
+screenshot the page at desktop (1440×900) and mobile (390×844) widths, checking
+the hero, terrain grid, product rail, editorial split and footer, plus the
+mobile drawer and `prefers-reduced-motion`.
 
 ---
 
@@ -127,8 +151,20 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md            ← this file
+├── README.md            ← design tokens, component map, a11y notes
+├── index.html
+├── public/
+│   ├── favicon.svg
+│   └── fonts/           ← self-hosted Archivo Black + Inter (OFL)
+└── src/
+    ├── App.jsx
+    ├── main.jsx
+    ├── index.css        ← Tailwind @theme tokens, keyframes, reduced-motion
+    ├── fonts.css
+    ├── data/catalog.js  ← all dummy content
+    ├── hooks/
+    └── components/      ← Nav, Hero, Marquee, CategoryTile, ProductCard, …
 ```
 
 ---

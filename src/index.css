@@ -1,0 +1,99 @@
+@import "tailwindcss";
+@import "./fonts.css";
+
+@theme {
+  --color-ink: #0b0b0b;
+  --color-paper: #ffffff;
+  --color-fog: #f2f2f2;
+  --color-ash: #6e6e6e;
+  --color-signal: #ff3d00;
+  /* darker step for small orange text on white — #ff3d00 is 3.6:1 there */
+  --color-signal-ink: #d93000;
+
+  --font-display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --animate-marquee: marquee 28s linear infinite;
+  --animate-streak: streak 3.2s linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes streak {
+    0% {
+      transform: translateX(-20vw) scaleX(0.2);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    70% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(120vw) scaleX(1);
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+
+  /* The accent is loud enough; the focus ring only needs to be unmissable. */
+  :focus-visible {
+    outline: 3px solid var(--color-signal);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-paper);
+  }
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    line-height: 0.88;
+    /* Archivo Black is not condensed; squeeze it to get the stadium-poster feel. */
+    transform: scaleX(0.94);
+    transform-origin: left center;
+  }
+
+  .rail {
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
