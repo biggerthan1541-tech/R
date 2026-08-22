@@ -1,0 +1,250 @@
+# Evidence pack input — WORKED EXAMPLE.
+#
+# This is a scaffold from `pack new` with the answers, notes and one override
+# filled in. Build it with:  npm run pack -- build clients/harlow-and-vine-logistics-ltd.yaml
+# Generated from questionnaire baseline-cyber-insurance v2026.1.
+#
+# Leave any answer blank if the client genuinely does not know — the pack
+# reports it as "not answered", which is a finding in its own right.
+
+client:
+  name: "Harlow & Vine Logistics Ltd"
+  industry: Freight & warehousing
+  employees: 68
+  contact: "Dawn Whitmore, Operations Director"
+
+engagement:
+  msp: northgate   # brand config: config/brands/northgate.yaml (available: meridian, northgate)
+  assessedOn: 2026-08-22
+  assessedBy: Jordan Vale
+  method: "On-site review 18 Aug + walkthrough of M365, Datto and Veeam consoles"
+  policyRenewal: 2026-11-01
+  broker: Kelmore Risk Partners
+
+# Optional. Two or three sentences in your own words, shown near the top of
+# the pack. Leave blank to omit the section entirely.
+summary: >-
+  Harlow & Vine run a tidier estate than most businesses of their size: patching is
+  current, encryption is complete on laptops, and the incident response plan is
+  written down. The blocker is backups. Copies are being taken daily, but no one has
+  restored from them, and the backup account shares everyday credentials — so on the
+  evidence available today we cannot tell an underwriter that the business can
+  recover from ransomware. Fixing that single control moves them out of the decline
+  bracket. The DMARC and offboarding gaps are the next most visible on a carrier
+  questionnaire and are both inexpensive to close before the November renewal.
+answers:
+
+  # ------------------------------------------------------------------------
+  # IDENTITY & ACCESS — Multi-factor authentication  [CRITICAL, weight 20]
+  # ------------------------------------------------------------------------
+
+  # Is multi-factor authentication required for every employee email account?
+  #   Microsoft 365, Google Workspace, or whatever hosts your staff mailboxes.
+  #   all          Yes — enforced for every user, no exceptions  [PASS]
+  #   most         Enforced for most users, a few are exempt  [PARTIAL]
+  #   admins_only  Only for administrators / leadership  [FAIL]
+  #   optional     Available, but users choose whether to turn it on  [FAIL]
+  #   none         No  [FAIL]
+  mfa.email: most
+  # Is MFA required for remote access into your network (VPN, remote desktop, or
+  # similar)?
+  #   all        Yes — required for all remote access  [PASS]
+  #   partial    Required for some systems but not all  [PARTIAL]
+  #   none       No  [FAIL]
+  #   no_remote  We have no remote access into the network  [PASS]
+  mfa.remote_access: all
+  # Is MFA required for administrator accounts on your core systems?
+  #   The accounts that can create users, change security settings, or reach
+  #   everyone's data.
+  #   all   Yes — all administrator accounts  [PASS]
+  #   some  Some of them  [PARTIAL]
+  #   none  No  [FAIL]
+  mfa.admin_accounts: all
+  # ------------------------------------------------------------------------
+  # ENDPOINT PROTECTION — Endpoint detection & response  [CRITICAL, weight 15]
+  # ------------------------------------------------------------------------
+
+  # What protection is installed on your computers and servers?
+  #   edr_managed    Endpoint detection & response (EDR/MDR), monitored by a provider  [PASS]
+  #   edr_unmanaged  EDR software, but nobody is actively watching the alerts  [PARTIAL]
+  #   av             Traditional antivirus only  [FAIL]
+  #   builtin        Just whatever came with the operating system  [FAIL]
+  #   none           Nothing / not sure  [FAIL]
+  edr.tooling: edr_unmanaged
+  # What percentage of your computers and servers have that protection
+  # installed?
+  #   a number (%) — PASS >= 98, PARTIAL >= 90, otherwise FAIL
+  edr.coverage: 92
+  # ------------------------------------------------------------------------
+  # RESILIENCE — Backups and tested recovery  [CRITICAL, weight 15]
+  # ------------------------------------------------------------------------
+
+  # Is at least one backup copy kept where an attacker on your network cannot
+  # reach or delete it?
+  #   Offline, in a separate cloud account, or in immutable storage that cannot
+  #   be overwritten.
+  #   immutable       Yes — immutable or offline, separate credentials  [PASS]
+  #   separate_cloud  In a separate cloud service, but reachable with our normal logins  [PARTIAL]
+  #   same_network    Backups live on the same network / same accounts  [FAIL]
+  #   none            No backups, or not sure  [FAIL]
+  backup.offline_copy: separate_cloud
+  # When did you last actually restore data from backup to prove it works?
+  #   lt_3m   Within the last 3 months  [PASS]
+  #   lt_12m  Within the last 12 months  [PARTIAL]
+  #   gt_12m  More than a year ago  [FAIL]
+  #   never   Never tested / not sure  [FAIL]
+  backup.restore_test: never
+  # How often is critical business data backed up?
+  #   daily_or_better  Daily or more often  [PASS]
+  #   weekly           Weekly  [PARTIAL]
+  #   adhoc            Occasionally / no set schedule  [FAIL]
+  #   none             Not backed up  [FAIL]
+  backup.frequency: daily_or_better
+  # ------------------------------------------------------------------------
+  # EMAIL SECURITY — Email filtering and domain protection  [HIGH, weight 10]
+  # ------------------------------------------------------------------------
+
+  # Do you use email security filtering beyond what your mail provider includes
+  # by default?
+  #   advanced      Yes — a dedicated filtering product with link and attachment scanning  [PASS]
+  #   builtin_plus  Provider built-in protection with the paid security add-on enabled  [PASS]
+  #   builtin       Just the default protection  [PARTIAL]
+  #   none          None / not sure  [FAIL]
+  email.filtering: builtin_plus
+  # Is DMARC configured on your domain to stop others sending email that appears
+  # to come from you?
+  #   Enforcement means a policy of "quarantine" or "reject" — not "none".
+  #   enforced  Yes — set to quarantine or reject  [PASS]
+  #   monitor   Configured, but only in monitoring mode  [PARTIAL]
+  #   none      Not configured / not sure  [FAIL]
+  email.dmarc: none
+  # ------------------------------------------------------------------------
+  # IDENTITY & ACCESS — Access control and offboarding  [HIGH, weight 10]
+  # ------------------------------------------------------------------------
+
+  # How quickly is access removed when someone leaves the business?
+  #   same_day     Same day, following a written checklist  [PASS]
+  #   within_week  Usually within a week  [PARTIAL]
+  #   ad_hoc       When somebody remembers to ask  [FAIL]
+  #   unknown      No defined process  [FAIL]
+  access.offboarding: ad_hoc
+  # Do employees have administrator rights on their own computers?
+  #   none  No — standard user accounts only  [PASS]
+  #   few   A small number of documented exceptions  [PARTIAL]
+  #   most  Most or all staff do  [FAIL]
+  access.least_privilege: few
+  # How often do you review who has access to what?
+  #   quarterly  At least quarterly  [PASS]
+  #   annually   About once a year  [PARTIAL]
+  #   never      Never / no formal review  [FAIL]
+  access.review: annually
+  # ------------------------------------------------------------------------
+  # VULNERABILITY MANAGEMENT — Patching and end-of-life systems  [HIGH, weight 10]
+  # ------------------------------------------------------------------------
+
+  # How quickly are critical security updates applied after release?
+  #   lt_14d   Within 14 days  [PASS]
+  #   lt_30d   Within 30 days  [PARTIAL]
+  #   gt_30d   Longer than 30 days  [FAIL]
+  #   unknown  No defined process / not sure  [FAIL]
+  patch.critical_window: lt_14d
+  # Are you still running any software or operating systems that no longer
+  # receive security updates?
+  #   For example Windows Server 2012, Windows 7, or unsupported
+  #   line-of-business applications.
+  #   none      No  [PASS]
+  #   isolated  Yes, but they are isolated from the rest of the network  [PARTIAL]
+  #   yes       Yes, in normal use  [FAIL]
+  #   unknown   Not sure  [FAIL]
+  patch.eol: isolated
+  # ------------------------------------------------------------------------
+  # GOVERNANCE — Incident response plan  [MODERATE, weight 8]
+  # ------------------------------------------------------------------------
+
+  # Do you have a written plan for what to do when a cyber incident happens?
+  #   tested    Yes — written down and rehearsed in the last 12 months  [PASS]
+  #   written   Written down, but never rehearsed  [PARTIAL]
+  #   informal  We would work it out / it is in people's heads  [FAIL]
+  #   none      No  [FAIL]
+  ir.plan: written
+  # Do you know who to call in the first hour — IT provider, insurer, and legal?
+  #   documented  Yes — written down and available offline  [PASS]
+  #   partial     Some of them  [PARTIAL]
+  #   none        No  [FAIL]
+  ir.contacts: documented
+  # ------------------------------------------------------------------------
+  # PEOPLE — Security awareness training  [MODERATE, weight 6]
+  # ------------------------------------------------------------------------
+
+  # How often do staff receive security awareness training?
+  #   quarterly   Quarterly or more often  [PASS]
+  #   annually    Once a year  [PARTIAL]
+  #   onboarding  Only at induction  [FAIL]
+  #   none        None  [FAIL]
+  awareness.training: annually
+  # Do you run simulated phishing tests?
+  #   regular     Yes — regularly, with follow-up for those who click  [PASS]
+  #   occasional  Occasionally  [PARTIAL]
+  #   none        No  [FAIL]
+  awareness.phishing_sim: none
+  # ------------------------------------------------------------------------
+  # DATA PROTECTION — Encryption of devices and data  [MODERATE, weight 6]
+  # ------------------------------------------------------------------------
+
+  # Are laptops and mobile devices encrypted?
+  #   BitLocker on Windows, FileVault on Mac, and device encryption on phones.
+  #   all   Yes — all of them, and we can prove it  [PASS]
+  #   most  Most of them  [PARTIAL]
+  #   some  Some / not sure  [FAIL]
+  #   none  No  [FAIL]
+  encryption.endpoints: all
+  # Is sensitive customer or financial data encrypted where it is stored?
+  #   yes      Yes, and we know where that data lives  [PASS]
+  #   partial  Partly / we are not sure where all of it is  [PARTIAL]
+  #   no       No  [FAIL]
+  encryption.sensitive_data: partial
+# Optional. What you actually saw, per question id. Printed in the pack under
+# the relevant finding — this is what makes it an evidence pack rather than a
+# self-assessment. Delete the block if unused.
+notes:
+  mfa.email: >-
+    Entra ID Conditional Access reviewed 18 Aug. Policy applies to all 68 licensed
+    users; four service/shared mailboxes excluded, including accounts@ which receives
+    supplier invoices.
+  mfa.admin_accounts: >-
+    Six Global Admin accounts, all MFA-enforced. Northgate's own delegated admin
+    access also enforced via GDAP.
+  edr.tooling: >-
+    SentinelOne installed and licensed, alerting to an unmonitored shared mailbox.
+    No out-of-hours response arrangement in place.
+  edr.coverage: >-
+    Console shows 61 of 66 known endpoints enrolled. The five missing are two warehouse
+    scanners and three machines in the Ipswich depot rebuilt in June.
+  backup.offline_copy: >-
+    Veeam to Wasabi, daily. Reachable with the same M365 admin credentials used for
+    day-to-day administration; immutability available on the plan but not enabled.
+  backup.restore_test: >-
+    No restore has been performed since the Veeam migration in 2024. No test records
+    available on request.
+  email.dmarc: >-
+    Checked harlowvine.example live on 18 Aug: SPF and DKIM present and passing, no
+    DMARC record published at all.
+  access.offboarding: >-
+    Three accounts found active for staff who left in the last nine months, one with
+    access to the shared finance folder. No written leaver checklist exists.
+  encryption.sensitive_data: >-
+    Customer and rate data sits in Microsoft 365 and is encrypted at rest by default.
+    Finance also maintain local spreadsheets of customer bank details on two machines;
+    no one could say whether other copies exist.
+
+# Optional. Replace the standard gap/fix wording for this client only.
+# Delete the block if unused.
+overrides:
+  backup.restore_test:
+    fix: >-
+      Veeam is already licensed for the restore testing you need, so this costs time
+      rather than money. Book a half-day with Priya before the November renewal:
+      restore one finance file and one full server, write down the date and how long
+      the full restore took, and enable immutability on the Wasabi bucket while you
+      are in there. That single afternoon is what moves this report out of the
+      decline bracket.

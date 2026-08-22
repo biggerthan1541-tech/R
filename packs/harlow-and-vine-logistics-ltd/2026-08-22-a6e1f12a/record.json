@@ -1,0 +1,645 @@
+{
+  "packVersion": 1,
+  "generatedAt": "2026-08-22T09:52:17.492Z",
+  "assessmentId": "a6e1f12a-367a-4f11-97ee-7962c54f9bda",
+  "clientId": "77831780-40e1-476b-843e-5c0115eba433",
+  "questionnaire": {
+    "id": "baseline-cyber-insurance",
+    "version": "2026.1"
+  },
+  "brand": {
+    "slug": "northgate",
+    "companyName": "Northgate Managed IT"
+  },
+  "client": {
+    "name": "Harlow & Vine Logistics Ltd",
+    "industry": "Freight & warehousing",
+    "employees": 68,
+    "contact": "Dawn Whitmore, Operations Director"
+  },
+  "engagement": {
+    "msp": "northgate",
+    "assessedOn": "2026-08-22",
+    "assessedBy": "Jordan Vale",
+    "method": "On-site review 18 Aug + walkthrough of M365, Datto and Veeam consoles",
+    "policyRenewal": "2026-11-01",
+    "broker": "Kelmore Risk Partners"
+  },
+  "summary": "Harlow & Vine run a tidier estate than most businesses of their size: patching is current, encryption is complete on laptops, and the incident response plan is written down. The blocker is backups. Copies are being taken daily, but no one has restored from them, and the backup account shares everyday credentials — so on the evidence available today we cannot tell an underwriter that the business can recover from ransomware. Fixing that single control moves them out of the decline bracket. The DMARC and offboarding gaps are the next most visible on a carrier questionnaire and are both inexpensive to close before the November renewal.",
+  "answers": {
+    "mfa.email": "most",
+    "mfa.remote_access": "all",
+    "mfa.admin_accounts": "all",
+    "edr.tooling": "edr_unmanaged",
+    "edr.coverage": "92",
+    "backup.offline_copy": "separate_cloud",
+    "backup.restore_test": "never",
+    "backup.frequency": "daily_or_better",
+    "email.filtering": "builtin_plus",
+    "email.dmarc": "none",
+    "access.offboarding": "ad_hoc",
+    "access.least_privilege": "few",
+    "access.review": "annually",
+    "patch.critical_window": "lt_14d",
+    "patch.eol": "isolated",
+    "ir.plan": "written",
+    "ir.contacts": "documented",
+    "awareness.training": "annually",
+    "awareness.phishing_sim": "none",
+    "encryption.endpoints": "all",
+    "encryption.sensitive_data": "partial"
+  },
+  "notes": {
+    "mfa.email": "Entra ID Conditional Access reviewed 18 Aug. Policy applies to all 68 licensed users; four service/shared mailboxes excluded, including accounts@ which receives supplier invoices.",
+    "mfa.admin_accounts": "Six Global Admin accounts, all MFA-enforced. Northgate's own delegated admin access also enforced via GDAP.",
+    "edr.tooling": "SentinelOne installed and licensed, alerting to an unmonitored shared mailbox. No out-of-hours response arrangement in place.",
+    "edr.coverage": "Console shows 61 of 66 known endpoints enrolled. The five missing are two warehouse scanners and three machines in the Ipswich depot rebuilt in June.",
+    "backup.offline_copy": "Veeam to Wasabi, daily. Reachable with the same M365 admin credentials used for day-to-day administration; immutability available on the plan but not enabled.",
+    "backup.restore_test": "No restore has been performed since the Veeam migration in 2024. No test records available on request.",
+    "email.dmarc": "Checked harlowvine.example live on 18 Aug: SPF and DKIM present and passing, no DMARC record published at all.",
+    "access.offboarding": "Three accounts found active for staff who left in the last nine months, one with access to the shared finance folder. No written leaver checklist exists.",
+    "encryption.sensitive_data": "Customer and rate data sits in Microsoft 365 and is encrypted at rest by default. Finance also maintain local spreadsheets of customer bank details on two machines; no one could say whether other copies exist."
+  },
+  "overrides": {
+    "backup.restore_test": {
+      "fix": "Veeam is already licensed for the restore testing you need, so this costs time rather than money. Book a half-day with Priya before the November renewal: restore one finance file and one full server, write down the date and how long the full restore took, and enable immutability on the Wasabi bucket while you are in there. That single afternoon is what moves this report out of the decline bracket."
+    }
+  },
+  "result": {
+    "questionnaireId": "baseline-cyber-insurance",
+    "questionnaireVersion": "2026.1",
+    "score": 60,
+    "band": {
+      "key": "not_ready",
+      "label": "Not yet insurable",
+      "summary": "One or more controls that carriers treat as a precondition are missing. Expect a decline, or a policy with exclusions covering exactly the losses these controls prevent."
+    },
+    "controls": [
+      {
+        "id": "MFA_COVERAGE",
+        "title": "Multi-factor authentication",
+        "domain": "Identity & Access",
+        "severity": "critical",
+        "weight": 20,
+        "insurerContext": "MFA is the single most common precondition for cyber cover. Most carriers will not quote a business that cannot confirm MFA on email and remote access, and several exclude funds-transfer fraud losses outright where it is missing.",
+        "status": "partial",
+        "earned": 16.666666666666668,
+        "questions": [
+          {
+            "id": "mfa.email",
+            "prompt": "Is multi-factor authentication required for every employee email account?",
+            "help": "Microsoft 365, Google Workspace, or whatever hosts your staff mailboxes.",
+            "answerValue": "most",
+            "answerLabel": "Enforced for most users, a few are exempt",
+            "status": "partial",
+            "gap": "A handful of exempt accounts is where attackers go first, and insurers know it. Carriers routinely ask who the exceptions are, and an exempt executive or finance mailbox is the version of this answer most likely to get your quote loaded or declined.",
+            "fix": "Remove the exemptions. If a specific account genuinely cannot use MFA, document why in writing and restrict what it can reach — carriers accept a documented, contained exception far more readily than an undocumented one.",
+            "note": "Entra ID Conditional Access reviewed 18 Aug. Policy applies to all 68 licensed users; four service/shared mailboxes excluded, including accounts@ which receives supplier invoices."
+          },
+          {
+            "id": "mfa.remote_access",
+            "prompt": "Is MFA required for remote access into your network (VPN, remote desktop, or similar)?",
+            "help": null,
+            "answerValue": "all",
+            "answerLabel": "Yes — required for all remote access",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          },
+          {
+            "id": "mfa.admin_accounts",
+            "prompt": "Is MFA required for administrator accounts on your core systems?",
+            "help": "The accounts that can create users, change security settings, or reach everyone's data.",
+            "answerValue": "all",
+            "answerLabel": "Yes — all administrator accounts",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": "Six Global Admin accounts, all MFA-enforced. Northgate's own delegated admin access also enforced via GDAP."
+          }
+        ]
+      },
+      {
+        "id": "EDR_DEPLOYMENT",
+        "title": "Endpoint detection & response",
+        "domain": "Endpoint Protection",
+        "severity": "critical",
+        "weight": 15,
+        "insurerContext": "Carriers distinguish sharply between traditional antivirus and monitored endpoint detection and response. The second is increasingly a condition of cover because it is what stops a ransomware attack mid-flight rather than reporting it afterwards.",
+        "status": "partial",
+        "earned": 7.5,
+        "questions": [
+          {
+            "id": "edr.tooling",
+            "prompt": "What protection is installed on your computers and servers?",
+            "help": null,
+            "answerValue": "edr_unmanaged",
+            "answerLabel": "EDR software, but nobody is actively watching the alerts",
+            "status": "partial",
+            "gap": "The tool will spot an attack in progress, but only if somebody reads the alert. Ransomware is typically deployed outside business hours precisely because nobody is looking. Insurers ask specifically whether alerts are monitored, and an unmonitored tool earns little credit.",
+            "fix": "Have your IT provider take on monitoring and response for the alerts, so a detection at 2am produces action rather than an unread notification.",
+            "note": "SentinelOne installed and licensed, alerting to an unmonitored shared mailbox. No out-of-hours response arrangement in place."
+          },
+          {
+            "id": "edr.coverage",
+            "prompt": "What percentage of your computers and servers have that protection installed?",
+            "help": null,
+            "answerValue": "92",
+            "answerLabel": "92%",
+            "status": "partial",
+            "gap": "The uncovered machines are the ones that will be hit. Underwriters read anything short of near-total coverage as a gap they cannot size, because neither can you.",
+            "fix": "Reconcile the list of protected machines against your actual asset list and close the difference. The machines missing from an inventory are usually old servers, which are also the most vulnerable ones.",
+            "note": "Console shows 61 of 66 known endpoints enrolled. The five missing are two warehouse scanners and three machines in the Ipswich depot rebuilt in June."
+          }
+        ]
+      },
+      {
+        "id": "BACKUP_RECOVERY",
+        "title": "Backups and tested recovery",
+        "domain": "Resilience",
+        "severity": "critical",
+        "weight": 15,
+        "insurerContext": "Backups decide the size of a ransomware claim. Carriers ask three things: are backups separated from the live network, how recent are they, and have you actually restored from them. The third question is where most businesses fail.",
+        "status": "fail",
+        "earned": 7.5,
+        "questions": [
+          {
+            "id": "backup.offline_copy",
+            "prompt": "Is at least one backup copy kept where an attacker on your network cannot reach or delete it?",
+            "help": "Offline, in a separate cloud account, or in immutable storage that cannot be overwritten.",
+            "answerValue": "separate_cloud",
+            "answerLabel": "In a separate cloud service, but reachable with our normal logins",
+            "status": "partial",
+            "gap": "If an attacker takes an administrator login, they can reach the backups with it. Ransomware crews delete backups first and demand payment second — a backup that shares your everyday credentials is one password away from being gone.",
+            "fix": "Move backups behind credentials that are not used for anything else, and turn on immutability so a copy cannot be deleted or overwritten for a fixed retention window.",
+            "note": "Veeam to Wasabi, daily. Reachable with the same M365 admin credentials used for day-to-day administration; immutability available on the plan but not enabled."
+          },
+          {
+            "id": "backup.restore_test",
+            "prompt": "When did you last actually restore data from backup to prove it works?",
+            "help": null,
+            "answerValue": "never",
+            "answerLabel": "Never tested / not sure",
+            "status": "fail",
+            "gap": "You do not currently know whether your backups work. Most businesses that discover this discover it during a ransomware attack, when the answer arrives too late to do anything about. An underwriter will read an untested backup as no backup.",
+            "fix": "Veeam is already licensed for the restore testing you need, so this costs time rather than money. Book a half-day with Priya before the November renewal: restore one finance file and one full server, write down the date and how long the full restore took, and enable immutability on the Wasabi bucket while you are in there. That single afternoon is what moves this report out of the decline bracket.",
+            "note": "No restore has been performed since the Veeam migration in 2024. No test records available on request."
+          },
+          {
+            "id": "backup.frequency",
+            "prompt": "How often is critical business data backed up?",
+            "help": null,
+            "answerValue": "daily_or_better",
+            "answerLabel": "Daily or more often",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": "EMAIL_SECURITY",
+        "title": "Email filtering and domain protection",
+        "domain": "Email Security",
+        "severity": "high",
+        "weight": 10,
+        "insurerContext": "Most claims start in an inbox. Carriers look for filtering ahead of the mailbox and for DMARC, which stops criminals sending mail that appears to come from your own domain.",
+        "status": "fail",
+        "earned": 5,
+        "questions": [
+          {
+            "id": "email.filtering",
+            "prompt": "Do you use email security filtering beyond what your mail provider includes by default?",
+            "help": null,
+            "answerValue": "builtin_plus",
+            "answerLabel": "Provider built-in protection with the paid security add-on enabled",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          },
+          {
+            "id": "email.dmarc",
+            "prompt": "Is DMARC configured on your domain to stop others sending email that appears to come from you?",
+            "help": "Enforcement means a policy of \"quarantine\" or \"reject\" — not \"none\".",
+            "answerValue": "none",
+            "answerLabel": "Not configured / not sure",
+            "status": "fail",
+            "gap": "Anyone can send email that appears to come from your business. The common version is a criminal emailing your customers a real-looking invoice with their own bank details — your customers lose money, and they come to you about it. Underwriters check this in seconds because it is public information.",
+            "fix": "Publish SPF, DKIM and DMARC records for your domain and work up to an enforcing policy. This is a one-off configuration job with no ongoing licence cost.",
+            "note": "Checked harlowvine.example live on 18 Aug: SPF and DKIM present and passing, no DMARC record published at all."
+          }
+        ]
+      },
+      {
+        "id": "ACCESS_CONTROL",
+        "title": "Access control and offboarding",
+        "domain": "Identity & Access",
+        "severity": "high",
+        "weight": 10,
+        "insurerContext": "Underwriters use offboarding as a proxy for whether a business has real process. Accounts belonging to people who left are a common finding in breach investigations and an easy one for a carrier to ask about.",
+        "status": "fail",
+        "earned": 3.333333333333333,
+        "questions": [
+          {
+            "id": "access.offboarding",
+            "prompt": "How quickly is access removed when someone leaves the business?",
+            "help": null,
+            "answerValue": "ad_hoc",
+            "answerLabel": "When somebody remembers to ask",
+            "status": "fail",
+            "gap": "Former employees may still be able to reach company email and files. Beyond the obvious risk from a disgruntled leaver, these forgotten accounts are unmonitored and unprotected — attackers look for them specifically. It also signals to an underwriter that security depends on memory rather than process.",
+            "fix": "Create a written leaver checklist, run it the day someone leaves, and audit existing accounts now against your current staff list. That audit usually turns up more than expected.",
+            "note": "Three accounts found active for staff who left in the last nine months, one with access to the shared finance folder. No written leaver checklist exists."
+          },
+          {
+            "id": "access.least_privilege",
+            "prompt": "Do employees have administrator rights on their own computers?",
+            "help": null,
+            "answerValue": "few",
+            "answerLabel": "A small number of documented exceptions",
+            "status": "partial",
+            "gap": "Documented exceptions are acceptable to most carriers, but each one raises the ceiling on how much damage a single mistaken click can do.",
+            "fix": "Review the exception list periodically and remove rights that are no longer needed. Keep the written justification current — it is what makes this defensible to an underwriter.",
+            "note": null
+          },
+          {
+            "id": "access.review",
+            "prompt": "How often do you review who has access to what?",
+            "help": null,
+            "answerValue": "annually",
+            "answerLabel": "About once a year",
+            "status": "partial",
+            "gap": "An annual review is enough to catch the worst drift but leaves most of the year uncovered. Access accumulates quietly as people change roles.",
+            "fix": "Move to a quarterly review of who can reach financial systems, customer data and administrative tools, and keep the sign-off.",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": "PATCH_MANAGEMENT",
+        "title": "Patching and end-of-life systems",
+        "domain": "Vulnerability Management",
+        "severity": "high",
+        "weight": 10,
+        "insurerContext": "Carriers ask how fast critical patches land, and separately whether unsupported software is still running. Unsupported systems are a common explicit exclusion.",
+        "status": "partial",
+        "earned": 7.5,
+        "questions": [
+          {
+            "id": "patch.critical_window",
+            "prompt": "How quickly are critical security updates applied after release?",
+            "help": null,
+            "answerValue": "lt_14d",
+            "answerLabel": "Within 14 days",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          },
+          {
+            "id": "patch.eol",
+            "prompt": "Are you still running any software or operating systems that no longer receive security updates?",
+            "help": "For example Windows Server 2012, Windows 7, or unsupported line-of-business applications.",
+            "answerValue": "isolated",
+            "answerLabel": "Yes, but they are isolated from the rest of the network",
+            "status": "partial",
+            "gap": "Isolation is the right interim answer and most carriers will accept it, provided you can describe the isolation. It is still a system that will never be fixed again, so it needs an end date.",
+            "fix": "Document how the system is isolated and what it can still reach, and set a replacement date. Carriers respond well to a dated plan.",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": "INCIDENT_RESPONSE",
+        "title": "Incident response plan",
+        "domain": "Governance",
+        "severity": "moderate",
+        "weight": 8,
+        "insurerContext": "Carriers ask whether a plan exists, whether it has been rehearsed, and whether it names the carrier's own notification line. Late notification is a common reason for a claim to be reduced.",
+        "status": "partial",
+        "earned": 6,
+        "questions": [
+          {
+            "id": "ir.plan",
+            "prompt": "Do you have a written plan for what to do when a cyber incident happens?",
+            "help": null,
+            "answerValue": "written",
+            "answerLabel": "Written down, but never rehearsed",
+            "status": "partial",
+            "gap": "An unrehearsed plan is usually missing the practical details — who has the phone numbers when email is down, who can authorise taking systems offline. Those gaps only show up under pressure, when they cost hours.",
+            "fix": "Run a one-hour tabletop exercise: talk through a ransomware Monday morning with the people who would actually be involved, and correct the plan where it broke. Keep a dated note that you did it.",
+            "note": null
+          },
+          {
+            "id": "ir.contacts",
+            "prompt": "Do you know who to call in the first hour — IT provider, insurer, and legal?",
+            "help": null,
+            "answerValue": "documented",
+            "answerLabel": "Yes — written down and available offline",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": "SECURITY_AWARENESS",
+        "title": "Security awareness training",
+        "domain": "People",
+        "severity": "moderate",
+        "weight": 6,
+        "insurerContext": "Training is standard on nearly every questionnaire. Carriers look for regular training rather than a one-off induction, and for simulated phishing as evidence it is working.",
+        "status": "fail",
+        "earned": 1.5,
+        "questions": [
+          {
+            "id": "awareness.training",
+            "prompt": "How often do staff receive security awareness training?",
+            "help": null,
+            "answerValue": "annually",
+            "answerLabel": "Once a year",
+            "status": "partial",
+            "gap": "Annual training is the accepted minimum but decays quickly — recognition of a scam message drops off within a few months of the session.",
+            "fix": "Move to short quarterly refreshers rather than one long annual session. Retention is markedly better and staff resent it less.",
+            "note": null
+          },
+          {
+            "id": "awareness.phishing_sim",
+            "prompt": "Do you run simulated phishing tests?",
+            "help": null,
+            "answerValue": "none",
+            "answerLabel": "No",
+            "status": "fail",
+            "gap": "Without simulations you have no idea how your staff actually behave when a convincing scam arrives — training completion tells you they sat through it, not that it worked. Carriers increasingly ask for click rates because it is the one measurable human-risk number.",
+            "fix": "Add phishing simulation, usually bundled with the training platform, and use the results to target follow-up rather than to punish.",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": "ENCRYPTION",
+        "title": "Encryption of devices and data",
+        "domain": "Data Protection",
+        "severity": "moderate",
+        "weight": 6,
+        "insurerContext": "Encryption on laptops and phones limits the reporting obligations after a device is lost, which directly limits the cost of that event to the carrier.",
+        "status": "partial",
+        "earned": 4.5,
+        "questions": [
+          {
+            "id": "encryption.endpoints",
+            "prompt": "Are laptops and mobile devices encrypted?",
+            "help": "BitLocker on Windows, FileVault on Mac, and device encryption on phones.",
+            "answerValue": "all",
+            "answerLabel": "Yes — all of them, and we can prove it",
+            "status": "pass",
+            "gap": null,
+            "fix": null,
+            "note": null
+          },
+          {
+            "id": "encryption.sensitive_data",
+            "prompt": "Is sensitive customer or financial data encrypted where it is stored?",
+            "help": null,
+            "answerValue": "partial",
+            "answerLabel": "Partly / we are not sure where all of it is",
+            "status": "partial",
+            "gap": "Not knowing where sensitive data lives is the more serious half of this answer. After an incident you have to tell people what was exposed, and you cannot do that if you do not know what you held or where.",
+            "fix": "Map where customer and financial data is stored — including the spreadsheets on individual machines — then apply encryption to those locations.",
+            "note": "Customer and rate data sits in Microsoft 365 and is encrypted at rest by default. Finance also maintain local spreadsheets of customer bank details on two machines; no one could say whether other copies exist."
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "total": 21,
+      "pass": 7,
+      "partial": 10,
+      "fail": 4,
+      "unknown": 0
+    },
+    "criticalFailures": [
+      {
+        "id": "BACKUP_RECOVERY",
+        "title": "Backups and tested recovery"
+      }
+    ],
+    "findings": [
+      {
+        "controlId": "BACKUP_RECOVERY",
+        "controlTitle": "Backups and tested recovery",
+        "domain": "Resilience",
+        "severity": "critical",
+        "id": "backup.restore_test",
+        "prompt": "When did you last actually restore data from backup to prove it works?",
+        "help": null,
+        "answerValue": "never",
+        "answerLabel": "Never tested / not sure",
+        "status": "fail",
+        "gap": "You do not currently know whether your backups work. Most businesses that discover this discover it during a ransomware attack, when the answer arrives too late to do anything about. An underwriter will read an untested backup as no backup.",
+        "fix": "Veeam is already licensed for the restore testing you need, so this costs time rather than money. Book a half-day with Priya before the November renewal: restore one finance file and one full server, write down the date and how long the full restore took, and enable immutability on the Wasabi bucket while you are in there. That single afternoon is what moves this report out of the decline bracket.",
+        "note": "No restore has been performed since the Veeam migration in 2024. No test records available on request."
+      },
+      {
+        "controlId": "MFA_COVERAGE",
+        "controlTitle": "Multi-factor authentication",
+        "domain": "Identity & Access",
+        "severity": "critical",
+        "id": "mfa.email",
+        "prompt": "Is multi-factor authentication required for every employee email account?",
+        "help": "Microsoft 365, Google Workspace, or whatever hosts your staff mailboxes.",
+        "answerValue": "most",
+        "answerLabel": "Enforced for most users, a few are exempt",
+        "status": "partial",
+        "gap": "A handful of exempt accounts is where attackers go first, and insurers know it. Carriers routinely ask who the exceptions are, and an exempt executive or finance mailbox is the version of this answer most likely to get your quote loaded or declined.",
+        "fix": "Remove the exemptions. If a specific account genuinely cannot use MFA, document why in writing and restrict what it can reach — carriers accept a documented, contained exception far more readily than an undocumented one.",
+        "note": "Entra ID Conditional Access reviewed 18 Aug. Policy applies to all 68 licensed users; four service/shared mailboxes excluded, including accounts@ which receives supplier invoices."
+      },
+      {
+        "controlId": "EDR_DEPLOYMENT",
+        "controlTitle": "Endpoint detection & response",
+        "domain": "Endpoint Protection",
+        "severity": "critical",
+        "id": "edr.tooling",
+        "prompt": "What protection is installed on your computers and servers?",
+        "help": null,
+        "answerValue": "edr_unmanaged",
+        "answerLabel": "EDR software, but nobody is actively watching the alerts",
+        "status": "partial",
+        "gap": "The tool will spot an attack in progress, but only if somebody reads the alert. Ransomware is typically deployed outside business hours precisely because nobody is looking. Insurers ask specifically whether alerts are monitored, and an unmonitored tool earns little credit.",
+        "fix": "Have your IT provider take on monitoring and response for the alerts, so a detection at 2am produces action rather than an unread notification.",
+        "note": "SentinelOne installed and licensed, alerting to an unmonitored shared mailbox. No out-of-hours response arrangement in place."
+      },
+      {
+        "controlId": "EDR_DEPLOYMENT",
+        "controlTitle": "Endpoint detection & response",
+        "domain": "Endpoint Protection",
+        "severity": "critical",
+        "id": "edr.coverage",
+        "prompt": "What percentage of your computers and servers have that protection installed?",
+        "help": null,
+        "answerValue": "92",
+        "answerLabel": "92%",
+        "status": "partial",
+        "gap": "The uncovered machines are the ones that will be hit. Underwriters read anything short of near-total coverage as a gap they cannot size, because neither can you.",
+        "fix": "Reconcile the list of protected machines against your actual asset list and close the difference. The machines missing from an inventory are usually old servers, which are also the most vulnerable ones.",
+        "note": "Console shows 61 of 66 known endpoints enrolled. The five missing are two warehouse scanners and three machines in the Ipswich depot rebuilt in June."
+      },
+      {
+        "controlId": "BACKUP_RECOVERY",
+        "controlTitle": "Backups and tested recovery",
+        "domain": "Resilience",
+        "severity": "critical",
+        "id": "backup.offline_copy",
+        "prompt": "Is at least one backup copy kept where an attacker on your network cannot reach or delete it?",
+        "help": "Offline, in a separate cloud account, or in immutable storage that cannot be overwritten.",
+        "answerValue": "separate_cloud",
+        "answerLabel": "In a separate cloud service, but reachable with our normal logins",
+        "status": "partial",
+        "gap": "If an attacker takes an administrator login, they can reach the backups with it. Ransomware crews delete backups first and demand payment second — a backup that shares your everyday credentials is one password away from being gone.",
+        "fix": "Move backups behind credentials that are not used for anything else, and turn on immutability so a copy cannot be deleted or overwritten for a fixed retention window.",
+        "note": "Veeam to Wasabi, daily. Reachable with the same M365 admin credentials used for day-to-day administration; immutability available on the plan but not enabled."
+      },
+      {
+        "controlId": "EMAIL_SECURITY",
+        "controlTitle": "Email filtering and domain protection",
+        "domain": "Email Security",
+        "severity": "high",
+        "id": "email.dmarc",
+        "prompt": "Is DMARC configured on your domain to stop others sending email that appears to come from you?",
+        "help": "Enforcement means a policy of \"quarantine\" or \"reject\" — not \"none\".",
+        "answerValue": "none",
+        "answerLabel": "Not configured / not sure",
+        "status": "fail",
+        "gap": "Anyone can send email that appears to come from your business. The common version is a criminal emailing your customers a real-looking invoice with their own bank details — your customers lose money, and they come to you about it. Underwriters check this in seconds because it is public information.",
+        "fix": "Publish SPF, DKIM and DMARC records for your domain and work up to an enforcing policy. This is a one-off configuration job with no ongoing licence cost.",
+        "note": "Checked harlowvine.example live on 18 Aug: SPF and DKIM present and passing, no DMARC record published at all."
+      },
+      {
+        "controlId": "ACCESS_CONTROL",
+        "controlTitle": "Access control and offboarding",
+        "domain": "Identity & Access",
+        "severity": "high",
+        "id": "access.offboarding",
+        "prompt": "How quickly is access removed when someone leaves the business?",
+        "help": null,
+        "answerValue": "ad_hoc",
+        "answerLabel": "When somebody remembers to ask",
+        "status": "fail",
+        "gap": "Former employees may still be able to reach company email and files. Beyond the obvious risk from a disgruntled leaver, these forgotten accounts are unmonitored and unprotected — attackers look for them specifically. It also signals to an underwriter that security depends on memory rather than process.",
+        "fix": "Create a written leaver checklist, run it the day someone leaves, and audit existing accounts now against your current staff list. That audit usually turns up more than expected.",
+        "note": "Three accounts found active for staff who left in the last nine months, one with access to the shared finance folder. No written leaver checklist exists."
+      },
+      {
+        "controlId": "ACCESS_CONTROL",
+        "controlTitle": "Access control and offboarding",
+        "domain": "Identity & Access",
+        "severity": "high",
+        "id": "access.least_privilege",
+        "prompt": "Do employees have administrator rights on their own computers?",
+        "help": null,
+        "answerValue": "few",
+        "answerLabel": "A small number of documented exceptions",
+        "status": "partial",
+        "gap": "Documented exceptions are acceptable to most carriers, but each one raises the ceiling on how much damage a single mistaken click can do.",
+        "fix": "Review the exception list periodically and remove rights that are no longer needed. Keep the written justification current — it is what makes this defensible to an underwriter.",
+        "note": null
+      },
+      {
+        "controlId": "ACCESS_CONTROL",
+        "controlTitle": "Access control and offboarding",
+        "domain": "Identity & Access",
+        "severity": "high",
+        "id": "access.review",
+        "prompt": "How often do you review who has access to what?",
+        "help": null,
+        "answerValue": "annually",
+        "answerLabel": "About once a year",
+        "status": "partial",
+        "gap": "An annual review is enough to catch the worst drift but leaves most of the year uncovered. Access accumulates quietly as people change roles.",
+        "fix": "Move to a quarterly review of who can reach financial systems, customer data and administrative tools, and keep the sign-off.",
+        "note": null
+      },
+      {
+        "controlId": "PATCH_MANAGEMENT",
+        "controlTitle": "Patching and end-of-life systems",
+        "domain": "Vulnerability Management",
+        "severity": "high",
+        "id": "patch.eol",
+        "prompt": "Are you still running any software or operating systems that no longer receive security updates?",
+        "help": "For example Windows Server 2012, Windows 7, or unsupported line-of-business applications.",
+        "answerValue": "isolated",
+        "answerLabel": "Yes, but they are isolated from the rest of the network",
+        "status": "partial",
+        "gap": "Isolation is the right interim answer and most carriers will accept it, provided you can describe the isolation. It is still a system that will never be fixed again, so it needs an end date.",
+        "fix": "Document how the system is isolated and what it can still reach, and set a replacement date. Carriers respond well to a dated plan.",
+        "note": null
+      },
+      {
+        "controlId": "SECURITY_AWARENESS",
+        "controlTitle": "Security awareness training",
+        "domain": "People",
+        "severity": "moderate",
+        "id": "awareness.phishing_sim",
+        "prompt": "Do you run simulated phishing tests?",
+        "help": null,
+        "answerValue": "none",
+        "answerLabel": "No",
+        "status": "fail",
+        "gap": "Without simulations you have no idea how your staff actually behave when a convincing scam arrives — training completion tells you they sat through it, not that it worked. Carriers increasingly ask for click rates because it is the one measurable human-risk number.",
+        "fix": "Add phishing simulation, usually bundled with the training platform, and use the results to target follow-up rather than to punish.",
+        "note": null
+      },
+      {
+        "controlId": "INCIDENT_RESPONSE",
+        "controlTitle": "Incident response plan",
+        "domain": "Governance",
+        "severity": "moderate",
+        "id": "ir.plan",
+        "prompt": "Do you have a written plan for what to do when a cyber incident happens?",
+        "help": null,
+        "answerValue": "written",
+        "answerLabel": "Written down, but never rehearsed",
+        "status": "partial",
+        "gap": "An unrehearsed plan is usually missing the practical details — who has the phone numbers when email is down, who can authorise taking systems offline. Those gaps only show up under pressure, when they cost hours.",
+        "fix": "Run a one-hour tabletop exercise: talk through a ransomware Monday morning with the people who would actually be involved, and correct the plan where it broke. Keep a dated note that you did it.",
+        "note": null
+      },
+      {
+        "controlId": "SECURITY_AWARENESS",
+        "controlTitle": "Security awareness training",
+        "domain": "People",
+        "severity": "moderate",
+        "id": "awareness.training",
+        "prompt": "How often do staff receive security awareness training?",
+        "help": null,
+        "answerValue": "annually",
+        "answerLabel": "Once a year",
+        "status": "partial",
+        "gap": "Annual training is the accepted minimum but decays quickly — recognition of a scam message drops off within a few months of the session.",
+        "fix": "Move to short quarterly refreshers rather than one long annual session. Retention is markedly better and staff resent it less.",
+        "note": null
+      },
+      {
+        "controlId": "ENCRYPTION",
+        "controlTitle": "Encryption of devices and data",
+        "domain": "Data Protection",
+        "severity": "moderate",
+        "id": "encryption.sensitive_data",
+        "prompt": "Is sensitive customer or financial data encrypted where it is stored?",
+        "help": null,
+        "answerValue": "partial",
+        "answerLabel": "Partly / we are not sure where all of it is",
+        "status": "partial",
+        "gap": "Not knowing where sensitive data lives is the more serious half of this answer. After an incident you have to tell people what was exposed, and you cannot do that if you do not know what you held or where.",
+        "fix": "Map where customer and financial data is stored — including the spreadsheets on individual machines — then apply encryption to those locations.",
+        "note": "Customer and rate data sits in Microsoft 365 and is encrypted at rest by default. Finance also maintain local spreadsheets of customer bank details on two machines; no one could say whether other copies exist."
+      }
+    ]
+  },
+  "sourceFile": "/home/user/R/clients/harlow-and-vine-logistics-ltd.yaml"
+}

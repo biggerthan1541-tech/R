@@ -1,0 +1,22 @@
+# Brand config for one MSP. Copy this file to add another.
+# Referenced from a client file as:  engagement.msp: northgate
+
+companyName: Northgate Managed IT
+tagline: Cyber insurance readiness assessment
+accentColor: "#1f4ed8"
+
+# Path is relative to this file. SVG, PNG, JPG or WebP.
+# Inlined as a data URI at render time so the pack stays a single portable file.
+logo: ./logos/northgate.svg
+
+contact:
+  email: security@northgate-it.example
+  phone: "+44 20 7946 0100"
+  website: northgate-it.example
+
+# {companyName} is substituted at render time.
+reportFooter: >-
+  Prepared by {companyName} for the named client. This assessment reflects the
+  information supplied and observed at the time of review, and common cyber-insurance
+  underwriting expectations. It is not a policy, a guarantee of cover, or a substitute
+  for advice from your broker.

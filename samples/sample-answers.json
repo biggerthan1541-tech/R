@@ -1,0 +1,40 @@
+{
+  "client": {
+    "name": "Harlow & Vine Logistics Ltd",
+    "industry": "Freight & warehousing",
+    "employeeCount": 68
+  },
+  "questionnaireId": "baseline-cyber-insurance",
+  "questionnaireVersion": "2026.1",
+  "answers": {
+    "mfa.email": "most",
+    "mfa.remote_access": "all",
+    "mfa.admin_accounts": "all",
+
+    "edr.tooling": "edr_unmanaged",
+    "edr.coverage": "92",
+
+    "backup.offline_copy": "separate_cloud",
+    "backup.restore_test": "never",
+    "backup.frequency": "daily_or_better",
+
+    "email.filtering": "builtin_plus",
+    "email.dmarc": "none",
+
+    "access.offboarding": "ad_hoc",
+    "access.least_privilege": "few",
+    "access.review": "annually",
+
+    "patch.critical_window": "lt_14d",
+    "patch.eol": "isolated",
+
+    "ir.plan": "written",
+    "ir.contacts": "documented",
+
+    "awareness.training": "annually",
+    "awareness.phishing_sim": "none",
+
+    "encryption.endpoints": "all",
+    "encryption.sensitive_data": "partial"
+  }
+}

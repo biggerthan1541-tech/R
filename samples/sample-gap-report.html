@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gap report — Harlow &amp; Vine Logistics Ltd</title>
+<style>*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --accent: #1f4ed8;
+  --ink: #14181f;
+  --ink-soft: #4a5462;
+  --ink-faint: #7b8595;
+  --line: #e2e6ec;
+  --line-soft: #eef1f5;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --pass: #0f7a4d;
+  --pass-bg: #e6f5ed;
+  --partial: #9a6206;
+  --partial-bg: #fdf3e0;
+  --fail: #b1281f;
+  --fail-bg: #fdeceb;
+  --unknown: #5b6472;
+  --unknown-bg: #eef0f3;
+  --radius: 10px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+h1, h2, h3, h4 { line-height: 1.25; margin: 0 0 .5rem; letter-spacing: -0.011em; }
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.02rem; }
+h4 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); }
+p { margin: 0 0 .8rem; }
+.muted { color: var(--ink-faint); }
+.lede { color: var(--ink-soft); margin-bottom: 1.5rem; }
+.crumbs { font-size: .85rem; color: var(--ink-faint); margin-bottom: .4rem; }
+
+/* ---------------------------------------------------------------- shell -- */
+
+.topbar {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  padding: .9rem 1.5rem;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+.brand { display: flex; align-items: center; gap: .7rem; }
+.brand.has-logo { flex-direction: column; align-items: flex-start; gap: .35rem; }
+.brand-logo { height: 34px; width: auto; max-width: 260px; }
+.brand-tagline { font-size: .78rem; color: var(--ink-faint); }
+.brand-initials {
+  display: grid; place-items: center;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-weight: 700; font-size: .8rem; letter-spacing: .02em;
+}
+.brand-text { display: flex; flex-direction: column; line-height: 1.3; }
+.brand-text strong { font-size: .95rem; }
+.brand-text span { font-size: .78rem; color: var(--ink-faint); }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.4rem;
+  margin-bottom: 1.2rem;
+}
+
+button, .button {
+  display: inline-block;
+  background: var(--accent); color: #fff;
+  border: 0; border-radius: 7px;
+  padding: .62rem 1.1rem;
+  font: inherit; font-weight: 600; font-size: .92rem;
+  cursor: pointer; text-decoration: none;
+}
+button:hover, .button:hover { filter: brightness(.92); }
+
+/* ---------------------------------------------------------------- forms -- */
+
+.inline-form { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+.inline-form label { display: flex; flex-direction: column; gap: .3rem; font-size: .82rem; color: var(--ink-soft); }
+input[type=text], input[type=number], .inline-form input {
+  font: inherit; font-size: .92rem;
+  padding: .5rem .65rem;
+  border: 1px solid var(--line); border-radius: 7px;
+  background: #fff;
+}
+
+.control-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.domain { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-faint); font-weight: 600; }
+.insurer-context { font-size: .88rem; color: var(--ink-soft); border-left: 3px solid var(--line); padding-left: .8rem; margin: .8rem 0 1.2rem; }
+
+.question { padding: 1rem 0; border-top: 1px solid var(--line-soft); }
+.question .prompt { font-weight: 600; margin-bottom: .2rem; }
+.question .help { font-size: .84rem; color: var(--ink-faint); margin-bottom: .6rem; }
+
+.options { display: flex; flex-direction: column; gap: .35rem; }
+.option { display: flex; gap: .55rem; align-items: flex-start; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; font-size: .92rem; }
+.option:hover { border-color: var(--accent); background: #fafbff; }
+.option input { margin-top: .3rem; accent-color: var(--accent); }
+.option:has(input:checked) { border-color: var(--accent); background: #f2f5ff; }
+
+.number-input { display: flex; align-items: center; gap: .5rem; }
+.number-input input { width: 8rem; }
+.unit { color: var(--ink-faint); }
+
+.submit-bar { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--bg) 35%); padding: 1.5rem 0 .5rem; text-align: right; }
+
+/* --------------------------------------------------------------- tables -- */
+
+.grid { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.grid th {
+  text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--ink-faint); padding: .5rem .6rem; border-bottom: 1px solid var(--line);
+}
+.grid td { padding: .6rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.grid tr:last-child td { border-bottom: 0; }
+.grid.tight td { padding: .45rem .6rem; }
+.grid.tight .q { width: 46%; }
+.grid.tight .a { width: 32%; color: var(--ink-soft); }
+.grid.tight .s { width: 22%; white-space: nowrap; text-align: right; }
+
+/* ---------------------------------------------------------------- pills -- */
+
+.pill {
+  display: inline-block; white-space: nowrap;
+  font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+  padding: .18rem .5rem; border-radius: 999px;
+  text-transform: uppercase;
+}
+.st-pass    { background: var(--pass-bg);    color: var(--pass); }
+.st-partial { background: var(--partial-bg); color: var(--partial); }
+.st-fail    { background: var(--fail-bg);    color: var(--fail); }
+.st-unknown { background: var(--unknown-bg); color: var(--unknown); }
+.sev-critical { background: #f4e4fb; color: #6b2192; }
+.sev-high     { background: #e5eefc; color: #1a4e9e; }
+.sev-moderate { background: #eef0f3; color: #55606f; }
+
+/* --------------------------------------------------------------- report -- */
+
+.report-page { background: #e9ebef; }
+.report {
+  max-width: 860px; margin: 0 auto; background: var(--panel);
+  padding: 3rem 3.2rem 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+.report-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 2rem; padding-bottom: 1.2rem; border-bottom: 2px solid var(--accent);
+  margin-bottom: 2rem;
+}
+.report-meta { display: flex; gap: 1.6rem; text-align: right; flex: 0 1 auto; }
+.report-meta div { display: flex; flex-direction: column; }
+.report-meta span { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); }
+.report-meta strong { font-size: .88rem; }
+.report-meta .nowrap strong { white-space: nowrap; }
+
+.verdict {
+  display: flex; gap: 2rem; align-items: center;
+  border: 1px solid var(--line); border-left: 6px solid var(--unknown);
+  border-radius: var(--radius); padding: 1.5rem 1.8rem; margin: 1.5rem 0 1.8rem;
+  background: #fbfcfd;
+}
+.verdict.band-ready       { border-left-color: var(--pass); }
+.verdict.band-conditional { border-left-color: var(--partial); }
+.verdict.band-not_ready   { border-left-color: var(--fail); }
+
+.score { text-align: center; flex: 0 0 auto; }
+.score-number { font-size: 3.4rem; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+.score-denom { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-faint); }
+.verdict-text h2 { margin-bottom: .35rem; }
+.verdict-text p { color: var(--ink-soft); font-size: .93rem; margin-bottom: .7rem; }
+
+.counts { list-style: none; display: flex; flex-wrap: wrap; gap: 1.2rem; margin: 0; padding: 0; font-size: .82rem; color: var(--ink-soft); }
+.counts strong { font-size: 1rem; color: var(--ink); }
+
+.callout { border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 2rem; }
+.callout h3 { font-size: .95rem; }
+.callout p { margin: 0; font-size: .92rem; }
+.callout.danger { background: var(--fail-bg); color: #6f1b15; }
+.callout.ok { background: var(--pass-bg); color: #0b5537; }
+.callout.note { background: #f4f6f9; color: var(--ink-soft); border: 1px solid var(--line); }
+.callout.note h3 { color: var(--ink); }
+.callout.note p { margin-bottom: .6rem; }
+.callout.note p:last-child { margin-bottom: 0; }
+
+/* ------------------------------------------------------- evidence pack -- */
+
+.cover {
+  break-after: page;
+  min-height: 86vh;
+  display: flex; flex-direction: column;
+  padding-bottom: 2rem;
+}
+.cover-brand { padding-bottom: 1.2rem; border-bottom: 2px solid var(--accent); }
+.cover-brand .brand-logo { height: 46px; max-width: 320px; }
+.cover-title { flex: 1 0 auto; padding: 4rem 0 2.5rem; }
+.cover-kicker {
+  font-size: .74rem; text-transform: uppercase; letter-spacing: .14em;
+  color: var(--ink-faint); font-weight: 700; margin-bottom: .6rem;
+}
+.cover-title h1 { font-size: 2.6rem; margin-bottom: 1rem; }
+.cover-verdict {
+  display: inline-block; font-size: .95rem; font-weight: 700;
+  padding: .4rem .9rem; border-radius: 999px;
+  background: var(--unknown-bg); color: var(--unknown);
+}
+.cover-verdict.band-ready       { background: var(--pass-bg);    color: var(--pass); }
+.cover-verdict.band-conditional { background: var(--partial-bg); color: var(--partial); }
+.cover-verdict.band-not_ready   { background: var(--fail-bg);    color: var(--fail); }
+
+.cover-facts { width: 100%; border-collapse: collapse; font-size: .9rem; max-width: 34rem; }
+.cover-facts th {
+  text-align: left; font-weight: 600; color: var(--ink-faint);
+  padding: .5rem .6rem .5rem 0; width: 11rem; vertical-align: top;
+  border-bottom: 1px solid var(--line-soft);
+}
+.cover-facts td { padding: .5rem 0; border-bottom: 1px solid var(--line-soft); }
+
+.observed {
+  margin: .9rem 0 0; padding-top: .7rem; border-top: 1px dashed var(--line);
+  font-size: .85rem; color: var(--ink-soft);
+}
+.observed span {
+  display: inline-block; margin-right: .5rem;
+  font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-faint);
+}
+.row-note {
+  display: block; margin-top: .25rem;
+  font-size: .8rem; color: var(--ink-faint); font-style: italic;
+}
+
+.page-block { margin-bottom: 2.4rem; }
+.page-block > h2 { padding-bottom: .5rem; border-bottom: 1px solid var(--line); margin-bottom: 1.1rem; }
+
+.finding {
+  border: 1px solid var(--line); border-left: 4px solid var(--unknown);
+  border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+  break-inside: avoid;
+}
+.st-border-fail    { border-left-color: var(--fail); }
+.st-border-partial { border-left-color: var(--partial); }
+.st-border-unknown { border-left-color: var(--unknown); }
+
+.finding > header { display: flex; gap: .9rem; align-items: flex-start; margin-bottom: .9rem; }
+.finding-index {
+  flex: 0 0 auto; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--ink); color: #fff; font-size: .8rem; font-weight: 700;
+}
+.finding h3 { margin-bottom: .4rem; }
+.finding-meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0; font-size: .8rem; }
+.finding-meta .answer { color: var(--ink-faint); }
+.finding-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+.finding-body p { font-size: .9rem; color: var(--ink-soft); margin: 0; }
+.finding-body h4 { margin-bottom: .3rem; }
+
+.control-detail { margin-bottom: 1.6rem; break-inside: avoid; }
+.control-detail > header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.control-detail h3 .domain { margin-left: .5rem; }
+.control-detail .insurer-context { margin: .5rem 0 .6rem; }
+.control-detail .insurer-context em { color: var(--ink-faint); }
+
+.report-foot { border-top: 1px solid var(--line); padding-top: 1rem; margin-top: 2.5rem; font-size: .76rem; color: var(--ink-faint); }
+.report-foot .contact { margin: 0; }
+
+.print-bar {
+  position: fixed; bottom: 1.2rem; right: 1.2rem;
+  display: flex; gap: .8rem; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  padding: .45rem .5rem .45rem 1.1rem; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+  font-size: .88rem;
+}
+
+@media (max-width: 720px) {
+  .report { padding: 1.5rem 1.2rem; }
+  .report-head, .verdict, .finding-body { flex-direction: column; grid-template-columns: 1fr; gap: 1rem; }
+  .report-meta { text-align: left; flex-wrap: wrap; }
+}
+
+@media print {
+  body { background: #fff; }
+  .report { max-width: none; box-shadow: none; padding: 0; }
+  .no-print { display: none !important; }
+  .cover { min-height: 0; }
+  .page-block { break-inside: auto; }
+  h2 { break-after: avoid; }
+  @page { margin: 16mm 14mm; }
+}
+</style>
+<style>:root { --accent: #1f4ed8; }</style>
+</head>
+<body class="report-page">
+
+<div class="report">
+  
+  <header class="report-head">
+    <div class="brand has-logo">
+      <img class="brand-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNTIgMzQiIHdpZHRoPSIxNTIiIGhlaWdodD0iMzQiPgogIDxyZWN0IHg9IjAiIHk9IjIiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgcng9IjcuNSIgZmlsbD0iIzFmNGVkOCIvPgogIDxwYXRoIGQ9Ik04LjUgMjQuNVYxMGw2LjUgOC41TDIxLjUgMTB2MTQuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIuOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHRleHQgeD0iMzkiIHk9IjE2IiBmb250LWZhbWlseT0iU2Vnb2UgVUksSGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUuNSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzE0MTgxZiI+Tm9ydGhnYXRlPC90ZXh0PgogIDx0ZXh0IHg9IjM5LjUiIHk9IjI4IiBmb250LWZhbWlseT0iU2Vnb2UgVUksSGVsdmV0aWNhLEFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iOC40IiBsZXR0ZXItc3BhY2luZz0iMi41IiBmaWxsPSIjN2I4NTk1Ij5NQU5BR0VEIElUPC90ZXh0Pgo8L3N2Zz4K" alt="Northgate Managed IT">
+      <span class="brand-tagline">Cyber insurance readiness assessment</span>
+    </div>
+    <div class="report-meta">
+      <div><span>Prepared for</span><strong>Harlow &amp; Vine Logistics Ltd</strong></div>
+      <div class="nowrap"><span>Date</span><strong>22 August 2026</strong></div>
+      <div class="nowrap"><span>Questionnaire</span><strong>v2026.1</strong></div>
+    </div>
+  </header>
+
+  <h1>Cyber insurance gap report</h1>
+
+  <section class="verdict band-not_ready">
+    <div class="score">
+      <div class="score-number">60</div>
+      <div class="score-denom">out of 100</div>
+    </div>
+    <div class="verdict-text">
+      <h2>Not yet insurable</h2>
+      <p>One or more controls that carriers treat as a precondition are missing. Expect a decline, or a policy with exclusions covering exactly the losses these controls prevent.</p>
+      <ul class="counts">
+        <li><strong>7</strong> meeting expectations</li>
+        <li><strong>10</strong> likely to be queried</li>
+        <li><strong>4</strong> likely to fail</li>
+        
+      </ul>
+    </div>
+  </section>
+
+  <div class="callout danger">
+        <h3>Blocking issues</h3>
+        <p>One control that carriers treat as a precondition of cover is not currently met: <strong>Backups and tested recovery</strong>. Until this is resolved, expect a decline or a policy that excludes the losses it prevents.</p>
+      </div>
+  
+
+  <section class="page-block">
+    <h2>Where you stand</h2>
+    <table class="grid">
+      <thead><tr><th>Area</th><th>Control</th><th>Insurer weighting</th><th>Assessment</th></tr></thead>
+      <tbody><tr>
+      <td>Identity &amp; Access</td>
+      <td>Multi-factor authentication</td>
+      <td><span class="pill sev-critical">critical</span></td>
+      <td><span class="pill st-partial">Partial — likely queried</span></td>
+    </tr><tr>
+      <td>Endpoint Protection</td>
+      <td>Endpoint detection &amp; response</td>
+      <td><span class="pill sev-critical">critical</span></td>
+      <td><span class="pill st-partial">Partial — likely queried</span></td>
+    </tr><tr>
+      <td>Resilience</td>
+      <td>Backups and tested recovery</td>
+      <td><span class="pill sev-critical">critical</span></td>
+      <td><span class="pill st-fail">Will likely fail</span></td>
+    </tr><tr>
+      <td>Email Security</td>
+      <td>Email filtering and domain protection</td>
+      <td><span class="pill sev-high">high</span></td>
+      <td><span class="pill st-fail">Will likely fail</span></td>
+    </tr><tr>
+      <td>Identity &amp; Access</td>
+      <td>Access control and offboarding</td>
+      <td><span class="pill sev-high">high</span></td>
+      <td><span class="pill st-fail">Will likely fail</span></td>
+    </tr><tr>
+      <td>Vulnerability Management</td>
+      <td>Patching and end-of-life systems</td>
+      <td><span class="pill sev-high">high</span></td>
+      <td><span class="pill st-partial">Partial — likely queried</span></td>
+    </tr><tr>
+      <td>Governance</td>
+      <td>Incident response plan</td>
+      <td><span class="pill sev-moderate">moderate</span></td>
+      <td><span class="pill st-partial">Partial — likely queried</span></td>
+    </tr><tr>
+      <td>People</td>
+      <td>Security awareness training</td>
+      <td><span class="pill sev-moderate">moderate</span></td>
+      <td><span class="pill st-fail">Will likely fail</span></td>
+    </tr><tr>
+      <td>Data Protection</td>
+      <td>Encryption of devices and data</td>
+      <td><span class="pill sev-moderate">moderate</span></td>
+      <td><span class="pill st-partial">Partial — likely queried</span></td>
+    </tr></tbody>
+    </table>
+  </section>
+
+  <section class="page-block">
+    <h2>What to fix, in order</h2>
+    <p class="lede">Working down this list in order removes the objections a carrier is most likely to raise. The first few items usually account for most of the difference in premium.</p>
+           <article class="finding st-border-fail">
+    <header>
+      <span class="finding-index">1</span>
+      <div>
+        <h3>Backups and tested recovery — When did you last actually restore data from backup to prove it works?</h3>
+        <p class="finding-meta">
+          <span class="pill st-fail">Will likely fail</span>
+          <span class="pill sev-critical">critical</span>
+          <span class="answer">Your answer: Never tested / not sure</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>You do not currently know whether your backups work. Most businesses that discover this discover it during a ransomware attack, when the answer arrives too late to do anything about. An underwriter will read an untested backup as no backup.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Restore a real file and a full system from backup this month and write down what happened, including how long it took. Then repeat quarterly.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">2</span>
+      <div>
+        <h3>Multi-factor authentication — Is multi-factor authentication required for every employee email account?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-critical">critical</span>
+          <span class="answer">Your answer: Enforced for most users, a few are exempt</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>A handful of exempt accounts is where attackers go first, and insurers know it. Carriers routinely ask who the exceptions are, and an exempt executive or finance mailbox is the version of this answer most likely to get your quote loaded or declined.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Remove the exemptions. If a specific account genuinely cannot use MFA, document why in writing and restrict what it can reach — carriers accept a documented, contained exception far more readily than an undocumented one.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">3</span>
+      <div>
+        <h3>Endpoint detection &amp; response — What protection is installed on your computers and servers?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-critical">critical</span>
+          <span class="answer">Your answer: EDR software, but nobody is actively watching the alerts</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>The tool will spot an attack in progress, but only if somebody reads the alert. Ransomware is typically deployed outside business hours precisely because nobody is looking. Insurers ask specifically whether alerts are monitored, and an unmonitored tool earns little credit.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Have your IT provider take on monitoring and response for the alerts, so a detection at 2am produces action rather than an unread notification.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">4</span>
+      <div>
+        <h3>Endpoint detection &amp; response — What percentage of your computers and servers have that protection installed?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-critical">critical</span>
+          <span class="answer">Your answer: 92%</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>The uncovered machines are the ones that will be hit. Underwriters read anything short of near-total coverage as a gap they cannot size, because neither can you.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Reconcile the list of protected machines against your actual asset list and close the difference. The machines missing from an inventory are usually old servers, which are also the most vulnerable ones.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">5</span>
+      <div>
+        <h3>Backups and tested recovery — Is at least one backup copy kept where an attacker on your network cannot reach or delete it?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-critical">critical</span>
+          <span class="answer">Your answer: In a separate cloud service, but reachable with our normal logins</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>If an attacker takes an administrator login, they can reach the backups with it. Ransomware crews delete backups first and demand payment second — a backup that shares your everyday credentials is one password away from being gone.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Move backups behind credentials that are not used for anything else, and turn on immutability so a copy cannot be deleted or overwritten for a fixed retention window.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-fail">
+    <header>
+      <span class="finding-index">6</span>
+      <div>
+        <h3>Email filtering and domain protection — Is DMARC configured on your domain to stop others sending email that appears to come from you?</h3>
+        <p class="finding-meta">
+          <span class="pill st-fail">Will likely fail</span>
+          <span class="pill sev-high">high</span>
+          <span class="answer">Your answer: Not configured / not sure</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Anyone can send email that appears to come from your business. The common version is a criminal emailing your customers a real-looking invoice with their own bank details — your customers lose money, and they come to you about it. Underwriters check this in seconds because it is public information.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Publish SPF, DKIM and DMARC records for your domain and work up to an enforcing policy. This is a one-off configuration job with no ongoing licence cost.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-fail">
+    <header>
+      <span class="finding-index">7</span>
+      <div>
+        <h3>Access control and offboarding — How quickly is access removed when someone leaves the business?</h3>
+        <p class="finding-meta">
+          <span class="pill st-fail">Will likely fail</span>
+          <span class="pill sev-high">high</span>
+          <span class="answer">Your answer: When somebody remembers to ask</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Former employees may still be able to reach company email and files. Beyond the obvious risk from a disgruntled leaver, these forgotten accounts are unmonitored and unprotected — attackers look for them specifically. It also signals to an underwriter that security depends on memory rather than process.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Create a written leaver checklist, run it the day someone leaves, and audit existing accounts now against your current staff list. That audit usually turns up more than expected.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">8</span>
+      <div>
+        <h3>Access control and offboarding — Do employees have administrator rights on their own computers?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-high">high</span>
+          <span class="answer">Your answer: A small number of documented exceptions</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Documented exceptions are acceptable to most carriers, but each one raises the ceiling on how much damage a single mistaken click can do.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Review the exception list periodically and remove rights that are no longer needed. Keep the written justification current — it is what makes this defensible to an underwriter.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">9</span>
+      <div>
+        <h3>Access control and offboarding — How often do you review who has access to what?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-high">high</span>
+          <span class="answer">Your answer: About once a year</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>An annual review is enough to catch the worst drift but leaves most of the year uncovered. Access accumulates quietly as people change roles.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Move to a quarterly review of who can reach financial systems, customer data and administrative tools, and keep the sign-off.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">10</span>
+      <div>
+        <h3>Patching and end-of-life systems — Are you still running any software or operating systems that no longer receive security updates?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-high">high</span>
+          <span class="answer">Your answer: Yes, but they are isolated from the rest of the network</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Isolation is the right interim answer and most carriers will accept it, provided you can describe the isolation. It is still a system that will never be fixed again, so it needs an end date.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Document how the system is isolated and what it can still reach, and set a replacement date. Carriers respond well to a dated plan.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-fail">
+    <header>
+      <span class="finding-index">11</span>
+      <div>
+        <h3>Security awareness training — Do you run simulated phishing tests?</h3>
+        <p class="finding-meta">
+          <span class="pill st-fail">Will likely fail</span>
+          <span class="pill sev-moderate">moderate</span>
+          <span class="answer">Your answer: No</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Without simulations you have no idea how your staff actually behave when a convincing scam arrives — training completion tells you they sat through it, not that it worked. Carriers increasingly ask for click rates because it is the one measurable human-risk number.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Add phishing simulation, usually bundled with the training platform, and use the results to target follow-up rather than to punish.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">12</span>
+      <div>
+        <h3>Incident response plan — Do you have a written plan for what to do when a cyber incident happens?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-moderate">moderate</span>
+          <span class="answer">Your answer: Written down, but never rehearsed</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>An unrehearsed plan is usually missing the practical details — who has the phone numbers when email is down, who can authorise taking systems offline. Those gaps only show up under pressure, when they cost hours.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Run a one-hour tabletop exercise: talk through a ransomware Monday morning with the people who would actually be involved, and correct the plan where it broke. Keep a dated note that you did it.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">13</span>
+      <div>
+        <h3>Security awareness training — How often do staff receive security awareness training?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-moderate">moderate</span>
+          <span class="answer">Your answer: Once a year</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Annual training is the accepted minimum but decays quickly — recognition of a scam message drops off within a few months of the session.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Move to short quarterly refreshers rather than one long annual session. Retention is markedly better and staff resent it less.</p>
+      </div>
+    </div>
+    
+  </article><article class="finding st-border-partial">
+    <header>
+      <span class="finding-index">14</span>
+      <div>
+        <h3>Encryption of devices and data — Is sensitive customer or financial data encrypted where it is stored?</h3>
+        <p class="finding-meta">
+          <span class="pill st-partial">Partial — likely queried</span>
+          <span class="pill sev-moderate">moderate</span>
+          <span class="answer">Your answer: Partly / we are not sure where all of it is</span>
+        </p>
+      </div>
+    </header>
+    <div class="finding-body">
+      <div>
+        <h4>Why this matters to you</h4>
+        <p>Not knowing where sensitive data lives is the more serious half of this answer. After an incident you have to tell people what was exposed, and you cannot do that if you do not know what you held or where.</p>
+      </div>
+      <div>
+        <h4>What to do</h4>
+        <p>Map where customer and financial data is stored — including the spreadsheets on individual machines — then apply encryption to those locations.</p>
+      </div>
+    </div>
+    
+  </article>
+  </section>
+
+  <section class="page-block">
+    <h2>Full response detail</h2>
+    <section class="control-detail">
+      <header>
+        <h3>Multi-factor authentication <span class="domain">Identity &amp; Access</span></h3>
+        <span class="pill st-partial">Partial — likely queried</span>
+      </header>
+      <p class="insurer-context">MFA is the single most common precondition for cyber cover. Most carriers will not quote a business that cannot confirm MFA on email and remote access, and several exclude funds-transfer fraud losses outright where it is missing. <em>Carriers treat this as a precondition of cover.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">Is multi-factor authentication required for every employee email account?</td>
+              <td class="a">Enforced for most users, a few are exempt</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">Is MFA required for remote access into your network (VPN, remote desktop, or similar)?</td>
+              <td class="a">Yes — required for all remote access</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr><tr>
+              <td class="q">Is MFA required for administrator accounts on your core systems?</td>
+              <td class="a">Yes — all administrator accounts</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Endpoint detection &amp; response <span class="domain">Endpoint Protection</span></h3>
+        <span class="pill st-partial">Partial — likely queried</span>
+      </header>
+      <p class="insurer-context">Carriers distinguish sharply between traditional antivirus and monitored endpoint detection and response. The second is increasingly a condition of cover because it is what stops a ransomware attack mid-flight rather than reporting it afterwards. <em>Carriers treat this as a precondition of cover.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">What protection is installed on your computers and servers?</td>
+              <td class="a">EDR software, but nobody is actively watching the alerts</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">What percentage of your computers and servers have that protection installed?</td>
+              <td class="a">92%</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Backups and tested recovery <span class="domain">Resilience</span></h3>
+        <span class="pill st-fail">Will likely fail</span>
+      </header>
+      <p class="insurer-context">Backups decide the size of a ransomware claim. Carriers ask three things: are backups separated from the live network, how recent are they, and have you actually restored from them. The third question is where most businesses fail. <em>Carriers treat this as a precondition of cover.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">Is at least one backup copy kept where an attacker on your network cannot reach or delete it?</td>
+              <td class="a">In a separate cloud service, but reachable with our normal logins</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">When did you last actually restore data from backup to prove it works?</td>
+              <td class="a">Never tested / not sure</td>
+              <td class="s"><span class="pill st-fail">Will likely fail</span></td>
+            </tr><tr>
+              <td class="q">How often is critical business data backed up?</td>
+              <td class="a">Daily or more often</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Email filtering and domain protection <span class="domain">Email Security</span></h3>
+        <span class="pill st-fail">Will likely fail</span>
+      </header>
+      <p class="insurer-context">Most claims start in an inbox. Carriers look for filtering ahead of the mailbox and for DMARC, which stops criminals sending mail that appears to come from your own domain. <em>Commonly asked and commonly priced.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">Do you use email security filtering beyond what your mail provider includes by default?</td>
+              <td class="a">Provider built-in protection with the paid security add-on enabled</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr><tr>
+              <td class="q">Is DMARC configured on your domain to stop others sending email that appears to come from you?</td>
+              <td class="a">Not configured / not sure</td>
+              <td class="s"><span class="pill st-fail">Will likely fail</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Access control and offboarding <span class="domain">Identity &amp; Access</span></h3>
+        <span class="pill st-fail">Will likely fail</span>
+      </header>
+      <p class="insurer-context">Underwriters use offboarding as a proxy for whether a business has real process. Accounts belonging to people who left are a common finding in breach investigations and an easy one for a carrier to ask about. <em>Commonly asked and commonly priced.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">How quickly is access removed when someone leaves the business?</td>
+              <td class="a">When somebody remembers to ask</td>
+              <td class="s"><span class="pill st-fail">Will likely fail</span></td>
+            </tr><tr>
+              <td class="q">Do employees have administrator rights on their own computers?</td>
+              <td class="a">A small number of documented exceptions</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">How often do you review who has access to what?</td>
+              <td class="a">About once a year</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Patching and end-of-life systems <span class="domain">Vulnerability Management</span></h3>
+        <span class="pill st-partial">Partial — likely queried</span>
+      </header>
+      <p class="insurer-context">Carriers ask how fast critical patches land, and separately whether unsupported software is still running. Unsupported systems are a common explicit exclusion. <em>Commonly asked and commonly priced.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">How quickly are critical security updates applied after release?</td>
+              <td class="a">Within 14 days</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr><tr>
+              <td class="q">Are you still running any software or operating systems that no longer receive security updates?</td>
+              <td class="a">Yes, but they are isolated from the rest of the network</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Incident response plan <span class="domain">Governance</span></h3>
+        <span class="pill st-partial">Partial — likely queried</span>
+      </header>
+      <p class="insurer-context">Carriers ask whether a plan exists, whether it has been rehearsed, and whether it names the carrier&#39;s own notification line. Late notification is a common reason for a claim to be reduced. <em>Expected on most questionnaires.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">Do you have a written plan for what to do when a cyber incident happens?</td>
+              <td class="a">Written down, but never rehearsed</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">Do you know who to call in the first hour — IT provider, insurer, and legal?</td>
+              <td class="a">Yes — written down and available offline</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Security awareness training <span class="domain">People</span></h3>
+        <span class="pill st-fail">Will likely fail</span>
+      </header>
+      <p class="insurer-context">Training is standard on nearly every questionnaire. Carriers look for regular training rather than a one-off induction, and for simulated phishing as evidence it is working. <em>Expected on most questionnaires.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">How often do staff receive security awareness training?</td>
+              <td class="a">Once a year</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr><tr>
+              <td class="q">Do you run simulated phishing tests?</td>
+              <td class="a">No</td>
+              <td class="s"><span class="pill st-fail">Will likely fail</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section><section class="control-detail">
+      <header>
+        <h3>Encryption of devices and data <span class="domain">Data Protection</span></h3>
+        <span class="pill st-partial">Partial — likely queried</span>
+      </header>
+      <p class="insurer-context">Encryption on laptops and phones limits the reporting obligations after a device is lost, which directly limits the cost of that event to the carrier. <em>Expected on most questionnaires.</em></p>
+      <table class="grid tight">
+        <tbody>
+          <tr>
+              <td class="q">Are laptops and mobile devices encrypted?</td>
+              <td class="a">Yes — all of them, and we can prove it</td>
+              <td class="s"><span class="pill st-pass">Meets expectations</span></td>
+            </tr><tr>
+              <td class="q">Is sensitive customer or financial data encrypted where it is stored?</td>
+              <td class="a">Partly / we are not sure where all of it is</td>
+              <td class="s"><span class="pill st-partial">Partial — likely queried</span></td>
+            </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+
+  <footer class="report-foot">
+    <p>Prepared by Northgate Managed IT for the named client. This assessment reflects the information supplied and observed at the time of review, and common cyber-insurance underwriting expectations. It is not a policy, a guarantee of cover, or a substitute for advice from your broker.</p>
+    <p class="contact">security@northgate-it.example · +44 20 7946 0100 · northgate-it.example</p>
+  </footer>
+</div>
+<div class="print-bar no-print"><button onclick="window.print()">Print / save as PDF</button></div>
+</body>
+</html>
