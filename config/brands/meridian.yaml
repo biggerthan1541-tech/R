@@ -1,0 +1,15 @@
+companyName: Meridian Technology Group
+tagline: Cyber risk & insurance readiness
+accentColor: "#0d7a63"
+
+logo: ./logos/meridian.svg
+
+contact:
+  email: risk@meridiantech.example
+  phone: "+44 161 496 0233"
+  website: meridiantech.example
+
+reportFooter: >-
+  Prepared by {companyName} for the named client. Findings reflect the control states
+  observed at the date of review. This document does not constitute an offer of
+  insurance or confirmation that cover will be granted.

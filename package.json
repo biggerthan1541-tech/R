@@ -11,9 +11,14 @@
     "start": "node --no-warnings=ExperimentalWarning src/server.js",
     "dev": "node --watch --no-warnings=ExperimentalWarning src/server.js",
     "sample": "node --no-warnings=ExperimentalWarning scripts/generate-sample.js",
-    "reset": "node --no-warnings=ExperimentalWarning scripts/reset-db.js"
+    "reset": "node --no-warnings=ExperimentalWarning scripts/reset-db.js",
+    "pack": "node --no-warnings=ExperimentalWarning bin/pack.js"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "yaml": "^2.9.0"
+  },
+  "bin": {
+    "pack": "./bin/pack.js"
   }
 }

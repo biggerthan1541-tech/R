@@ -34,7 +34,43 @@ function findingBlock(f, index) {
         <p>${esc(f.fix)}</p>
       </div>
     </div>
+    ${f.note ? `<p class="observed"><span>Observed</span>${esc(f.note)}</p>` : ''}
   </article>`;
+}
+
+function coverBlock({ branding, client, context, generatedAt, band, score }) {
+  const rows = [
+    ['Client', client.name],
+    ['Industry', client.industry],
+    ['Employees', client.employees],
+    ['Client contact', client.contact],
+    ['Assessed on', context.assessedOn],
+    ['Assessed by', context.assessedBy],
+    ['Method', context.method],
+    ['Policy renewal', context.policyRenewal],
+    ['Broker', context.broker],
+    ['Prepared', new Date(generatedAt).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })],
+  ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+
+  return `<section class="cover">
+    <div class="cover-brand">${brandMark(branding)}</div>
+    <div class="cover-title">
+      <p class="cover-kicker">Cyber insurance evidence pack</p>
+      <h1>${esc(client.name)}</h1>
+      <p class="cover-verdict band-${esc(band.key)}">${esc(band.label)} · ${esc(
+        score,
+      )}/100</p>
+    </div>
+    <table class="cover-facts">
+      <tbody>${rows
+        .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`)
+        .join('')}</tbody>
+    </table>
+  </section>`;
 }
 
 export function reportPage({
@@ -45,6 +81,8 @@ export function reportPage({
   generatedAt,
   inlineCss = null,
   standalone = false,
+  context = null,
+  summary = null,
 }) {
   const { score, band, controls, counts, findings, criticalFailures } = result;
 
@@ -92,7 +130,9 @@ export function reportPage({
           ${c.questions
             .map(
               (q) => `<tr>
-              <td class="q">${esc(q.prompt)}</td>
+              <td class="q">${esc(q.prompt)}${
+                q.note ? `<span class="row-note">${esc(q.note)}</span>` : ''
+              }</td>
               <td class="a">${esc(q.answerLabel ?? 'Not answered')}</td>
               <td class="s">${statusPill(q.status)}</td>
             </tr>`,
@@ -106,8 +146,23 @@ export function reportPage({
 
   const footer = branding.reportFooter.replaceAll('{companyName}', branding.companyName);
 
+  const cover = context
+    ? coverBlock({ branding, client, context, generatedAt, band, score })
+    : '';
+
+  const summaryBlock = summary
+    ? `<div class="callout note">
+        <h3>Assessor's summary</h3>
+        ${summary
+          .split(/\n{2,}/)
+          .map((p) => `<p>${esc(p.trim())}</p>`)
+          .join('')}
+      </div>`
+    : '';
+
   const body = `
 <div class="report">
+  ${cover}
   <header class="report-head">
     ${brandMark(branding)}
     <div class="report-meta">
@@ -125,7 +180,7 @@ export function reportPage({
     </div>
   </header>
 
-  <h1>Cyber insurance gap report</h1>
+  <h1>${context ? 'Readiness summary' : 'Cyber insurance gap report'}</h1>
 
   <section class="verdict band-${esc(band.key)}">
     <div class="score">
@@ -145,6 +200,7 @@ export function reportPage({
   </section>
 
   ${criticalCallout}
+  ${summaryBlock}
 
   <section class="page-block">
     <h2>Where you stand</h2>
@@ -186,7 +242,9 @@ ${
 }`;
 
   return layout({
-    title: `Gap report — ${client.name}`,
+    title: context
+      ? `Evidence pack — ${client.name}`
+      : `Gap report — ${client.name}`,
     branding,
     body,
     bodyClass: 'report-page',

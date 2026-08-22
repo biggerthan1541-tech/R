@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS evidence_records (
   status          TEXT NOT NULL,
   gap_text        TEXT,
   fix_text        TEXT,
+  note            TEXT,
   source          TEXT NOT NULL,
   recorded_by     TEXT NOT NULL,
   recorded_at     TEXT NOT NULL
@@ -72,6 +73,11 @@ CREATE TABLE IF NOT EXISTS assessment_results (
 );
 CREATE INDEX IF NOT EXISTS idx_results_client ON assessment_results(client_id);
 `);
+
+// Databases created before evidence packs existed predate evidence_records.note.
+if (!db.prepare('PRAGMA table_info(evidence_records)').all().some((c) => c.name === 'note')) {
+  db.exec('ALTER TABLE evidence_records ADD COLUMN note TEXT');
+}
 
 const now = () => new Date().toISOString();
 
@@ -158,8 +164,8 @@ export function insertEvidenceRecords(clientId, assessmentId, records, { recorde
     `INSERT INTO evidence_records
        (id, client_id, assessment_id, control_id, control_title, domain, severity,
         question_id, question_prompt, answer_value, answer_label, status,
-        gap_text, fix_text, source, recorded_by, recorded_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        gap_text, fix_text, note, source, recorded_by, recorded_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const at = now();
   db.exec('BEGIN');
@@ -180,6 +186,7 @@ export function insertEvidenceRecords(clientId, assessmentId, records, { recorde
         r.status,
         r.gap ?? null,
         r.fix ?? null,
+        r.note ?? null,
         source,
         recordedBy,
         at,

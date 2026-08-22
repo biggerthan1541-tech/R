@@ -54,16 +54,21 @@ function labelForAnswer(question, raw) {
   return question.options?.find((o) => o.value === raw)?.label ?? String(raw);
 }
 
-function narrativeFor(question, status) {
-  if (status === STATUS.PASS) return { gap: null, fix: null };
+function narrativeFor(question, status, override) {
+  const applied = (base) => ({
+    gap: override?.gap ?? base.gap,
+    fix: override?.fix ?? base.fix,
+  });
+
+  if (status === STATUS.PASS) return applied({ gap: null, fix: null });
   if (status === STATUS.UNKNOWN) {
-    return {
+    return applied({
       gap: 'This question was left unanswered. Insurers treat an unanswered control as an unmet one, and an incomplete questionnaire is itself a reason for a carrier to hold or decline a quote.',
       fix: 'Find out the answer before the questionnaire goes to the carrier. If nobody in the business knows, that is worth noting in its own right.',
-    };
+    });
   }
   const outcome = question.outcomes?.[status] ?? question.outcomes?.fail ?? {};
-  return { gap: outcome.gap ?? null, fix: outcome.fix ?? null };
+  return applied({ gap: outcome.gap ?? null, fix: outcome.fix ?? null });
 }
 
 const BANDS = {
@@ -90,13 +95,15 @@ const BANDS = {
 /**
  * @param questionnaire  the QUESTIONNAIRE object from config/controls.js
  * @param answers        { [questionId]: rawValue }
+ * @param notes          { [questionId]: string } what was actually observed, if anything
+ * @param overrides      { [questionId]: { gap?, fix? } } hand-tuned copy for this client
  */
-export function evaluateAssessment(questionnaire, answers) {
+export function evaluateAssessment(questionnaire, answers, { notes = {}, overrides = {} } = {}) {
   const controls = questionnaire.controls.map((control) => {
     const questions = control.questions.map((question) => {
       const raw = answers[question.id];
       const status = statusForAnswer(question, raw);
-      const { gap, fix } = narrativeFor(question, status);
+      const { gap, fix } = narrativeFor(question, status, overrides[question.id]);
       return {
         id: question.id,
         prompt: question.prompt,
@@ -106,6 +113,7 @@ export function evaluateAssessment(questionnaire, answers) {
         status,
         gap,
         fix,
+        note: notes[question.id] ?? null,
       };
     });
 
@@ -200,6 +208,7 @@ export function toEvidenceRecords(evaluation) {
       status: q.status,
       gap: q.gap,
       fix: q.fix,
+      note: q.note,
     })),
   );
 }
