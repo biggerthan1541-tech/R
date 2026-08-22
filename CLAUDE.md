@@ -6,7 +6,15 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository holds a **cyber-insurance questionnaire gap-analysis tool** — the wedge MVP for a compliance/insurance-readiness product sold to SMBs through the MSP channel.
+
+**Stack:** Node 22 + Express 5, server-rendered HTML, `node:sqlite` (built in) for persistence. Express is the only runtime dependency; there is no build step and no front-end framework.
+
+**Load-bearing convention:** control definitions and their pass/fail rules live in `config/controls.js` and nothing under `src/` knows about any specific control. Keep it that way — the whole point is that insurer requirements change without touching app logic.
+
+**Second load-bearing convention:** every row that belongs to a client carries `client_id`, and every query function in `src/db.js` takes `clientId` as its first argument and throws without one. The UI is single-tenant today; the data model is not. Do not add a query that skips the scope.
+
+See `README.md` for how to run it and what is deliberately out of scope.
 
 ---
 
@@ -25,7 +33,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/cyber-insurance-questionnaire-mvp-qr5v2f` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -106,30 +114,47 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ## Running & Testing
 
-> To be filled in once the project has a build system and test runner.
-
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
-
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+npm install
+npm run sample     # regenerate samples/sample-gap-report.html + seed a demo client
+npm start          # http://localhost:3000
+npm run dev        # same, with --watch
+npm run reset      # delete data/gap-analysis.db
 ```
+
+Requires Node 22.5+ for `node:sqlite`. There is no test runner yet — verify changes by
+running `npm run sample` (the sample flows through the same evaluation and rendering
+code as the web app) and by walking a questionnaire in the browser.
 
 ---
 
 ## Project Structure
 
-> To be filled in as the codebase grows.
-
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md
+├── README.md
+├── config/
+│   ├── controls.js       ← questionnaire, pass/fail rules, plain-language copy
+│   └── branding.js       ← company name, logo, colours, report disclaimer
+├── src/
+│   ├── server.js         ← Express routes; app.param resolves + scopes :clientId
+│   ├── db.js             ← schema and tenant-scoped queries
+│   ├── evaluate.js       ← pure scoring engine, no DB and no control knowledge
+│   ├── auth.js           ← stub actor; replace here when real auth lands
+│   └── views/            ← server-rendered HTML (layout, home, questionnaire, report)
+├── public/styles.css     ← shared by the app and the standalone sample report
+├── scripts/              ← generate-sample.js, reset-db.js
+├── samples/              ← sample answers, generated gap report, evidence JSON
+└── data/                 ← SQLite database (gitignored)
 ```
+
+### Writing plain-language copy
+
+The `gap` and `fix` text in `config/controls.js` is the product. Write it for a business
+owner with no security background: state the **consequence** (what it costs them, what
+an insurer does about it), never the mechanism. No jargon, no acronyms left unexpanded,
+no scare tactics beyond what is accurate.
 
 ---
 
