@@ -36,6 +36,10 @@ npm run setup    # one-time: writes .env with a generated SESSION_SECRET
 npm start        # http://localhost:3000 -> "Set up your MSP"
 ```
 
+**Running it on a server:** see **[DEPLOY.md](DEPLOY.md)** — server setup, deploying an update,
+backups and restores, and what to do when the site is down, written for someone who is not a
+developer.
+
 That is the whole install. Control definitions and requirement profiles load from `config/` on
 first start, so the database needs no seeding: open the app, create your practice, and begin.
 
@@ -49,8 +53,23 @@ npm run seed     # sync config/ into the database, provision the tenant and user
 npm run dev      # same as start, with reload on change
 npm test         # 121 tests
 npm run typecheck
+npm run backup   # consistent snapshot of the database, safe while running
+npm run restore -- <file>   # replace the database with a backup
 npm run reset    # delete the database file
 ```
+
+### Configuration
+
+Every variable is documented in [`.env.example`](.env.example). Two are required in production and
+the app refuses to start without them:
+
+| Variable | Why |
+|---|---|
+| `SESSION_SECRET` | Signs sessions and portal links. No default — a guessable signing key is worse than a refusal to boot. |
+| `PUBLIC_URL` | Portal links are absolute URLs that get emailed around, so the origin is configuration rather than a request header an attacker controls. |
+
+`NODE_ENV=production` also turns on secure cookies, HSTS, and an http → https redirect.
+`GET /health` reports liveness and the applied schema version, without naming any tenant.
 
 There is no default signing key: if `SESSION_SECRET` is missing the server refuses to start and
 tells you to run `npm run setup`.
