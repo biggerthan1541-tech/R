@@ -6,7 +6,20 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+`biggerthan1541-tech/R` is **Readiness** — a compliance and cyber-insurance-readiness platform for SMBs, sold through the MSP channel. See `README.md` for the product shape, the data model, and how to run it.
+
+Built in phases; **Phase 1 is complete** (evidence core + single-client flow). Phases 2–4 (MSP console and auth, white-label output, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
+
+### Stack
+
+Node 22 + TypeScript (ESM, no build step, run via `tsx`), Fastify, SQLite via `better-sqlite3`, server-rendered HTML with an auto-escaping template tag, `node:test`. Four runtime dependencies; keep it that way.
+
+### Non-negotiables
+
+- **Tenant isolation.** All customer data goes through the scoped repository in `src/db/tenant.ts`. Never hand a raw `Db` handle to anything outside `src/db/`, and never add a tenant-scoped table without a composite foreign key onto `clients (msp_id, id)` plus an entry in `TENANT_SCOPED_TABLES`.
+- **The evidence log is append-only.** No `UPDATE` or `DELETE` path for `evidence_records`, ever. Current state is the highest `seq`.
+- **Control and profile logic is data.** Pass/fail rules and gap copy live in `config/`, never in `src/`. Nothing under `src/domain/` should know what MFA is.
+- **Escape everything.** Build HTML with the `html` tag from `src/render/html.ts`; client names and free-text notes reach client-facing documents.
 
 ---
 
@@ -25,7 +38,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/msp-compliance-phase-1-8a31mx` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -106,29 +119,37 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ## Running & Testing
 
-> To be filled in once the project has a build system and test runner.
-
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+npm install
+npm run demo        # seed config + tenant + a worked example client
+npm start           # http://localhost:3000
+npm run dev         # with reload
 
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+npm test            # node:test, no runner dependency
+npm run typecheck   # tsc --noEmit
+npm run reset       # delete the database file
 ```
+
+There are no schema migrations yet — `schema.sql` is applied with `CREATE TABLE IF NOT EXISTS`, so a new column needs `npm run reset` to take effect. Add a migration step before real data exists.
 
 ---
 
 ## Project Structure
 
-> To be filled in as the codebase grows.
-
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md
+├── README.md                  ← product, data model, how to verify each phase
+├── config/
+│   ├── controls.json          ← control definitions, pass/fail rules, gap copy
+│   └── profiles/*.json        ← requirement profiles (insurer, CMMC, HIPAA, SOC 2)
+├── src/
+│   ├── db/                    ← schema.sql, connection, msps, tenant (isolation boundary)
+│   ├── domain/                ← evaluate, config-loader, readiness scoring, types
+│   ├── render/                ← html escaping, layout, operator views, evidence pack
+│   ├── server.ts              ← Fastify routes
+│   └── cli.ts                 ← seed / demo / reset
+└── test/                      ← isolation, evaluation, scoring, rendering
 ```
 
 ---

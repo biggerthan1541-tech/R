@@ -1,0 +1,18 @@
+{
+  "key": "insurer_baseline_2026",
+  "name": "Cyber Insurance Baseline Questionnaire",
+  "publisher": "Composite carrier baseline",
+  "version": "2026.1",
+  "description": "The controls that appear on nearly every cyber liability application. Weights reflect how heavily underwriters lean on each answer when deciding whether to quote at all.",
+  "items": [
+    { "control": "mfa_coverage", "weight": 30, "requirement": "mandatory", "note": "Universally treated as a precondition to quote." },
+    { "control": "tested_backups", "weight": 25, "requirement": "mandatory", "note": "Drives the ransomware sub-limit." },
+    { "control": "edr_deployment", "weight": 20, "requirement": "mandatory" },
+    { "control": "patch_management", "weight": 10, "requirement": "recommended" },
+    { "control": "email_security", "weight": 8, "requirement": "recommended", "note": "Directly tied to funds-transfer fraud cover." },
+    { "control": "incident_response_plan", "weight": 8, "requirement": "recommended", "note": "Late notification is a common claim denial." },
+    { "control": "access_offboarding", "weight": 6, "requirement": "recommended" },
+    { "control": "security_awareness_training", "weight": 6, "requirement": "recommended" },
+    { "control": "encryption", "weight": 5, "requirement": "recommended" }
+  ]
+}

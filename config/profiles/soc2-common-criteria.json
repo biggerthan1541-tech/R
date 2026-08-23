@@ -1,0 +1,17 @@
+{
+  "key": "soc2_common_criteria",
+  "name": "SOC 2 Common Criteria (Security)",
+  "publisher": "AICPA",
+  "version": "2017 TSC (2022 revision)",
+  "description": "The security Trust Services Criteria every SOC 2 report covers. Auditors expect evidence that each control operated consistently across the review period, not just that it exists today.",
+  "items": [
+    { "control": "access_offboarding", "weight": 20, "requirement": "mandatory", "note": "CC6.2 / CC6.3 — registration and removal of access." },
+    { "control": "mfa_coverage", "weight": 18, "requirement": "mandatory", "note": "CC6.1 — logical access security." },
+    { "control": "incident_response_plan", "weight": 14, "requirement": "mandatory", "note": "CC7.3 / CC7.4 — incident evaluation and response." },
+    { "control": "patch_management", "weight": 12, "requirement": "mandatory", "note": "CC7.1 — vulnerability identification and remediation." },
+    { "control": "edr_deployment", "weight": 12, "requirement": "mandatory", "note": "CC7.2 — monitoring for anomalies." },
+    { "control": "tested_backups", "weight": 10, "requirement": "recommended", "note": "A1.2 — recovery, where availability is in scope." },
+    { "control": "encryption", "weight": 8, "requirement": "recommended", "note": "CC6.7 — protection of data in transit and at rest." },
+    { "control": "security_awareness_training", "weight": 6, "requirement": "recommended", "note": "CC2.2 — internal communication of security responsibilities." }
+  ]
+}

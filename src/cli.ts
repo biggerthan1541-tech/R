@@ -1,0 +1,135 @@
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { db as sharedDb, projectRoot, type Db } from './db/connection.ts';
+import { ensureMsp } from './db/msps.ts';
+import { forTenant } from './db/tenant.ts';
+import { getControl, listControls, syncConfig } from './domain/config-loader.ts';
+import { evaluateControl } from './domain/evaluate.ts';
+import { assessClient } from './domain/readiness.ts';
+import { generatePack } from './server.ts';
+
+function seed(db: Db): void {
+  const { controls, profiles } = syncConfig(db);
+  console.log(`Synced ${controls} control definitions and ${profiles} requirement profiles from config/.`);
+  const mspId = ensureMsp(db, 'northwind-it', 'Northwind IT Services');
+  console.log(`Tenant ready: Northwind IT Services (${mspId})`);
+}
+
+/**
+ * Builds a worked example: one client, a dated history showing a control being
+ * remediated over time, and a generated pack.
+ */
+function demo(db: Db): void {
+  seed(db);
+  const mspId = ensureMsp(db, 'northwind-it', 'Northwind IT Services');
+  const tenant = forTenant(db, mspId);
+
+  const existing = tenant.listClients().find((c) => c.name === 'Harbour Dental Group');
+  const client = existing ?? tenant.createClient({
+    name: 'Harbour Dental Group',
+    industry: 'Healthcare — dental practice',
+    employeeCount: 34,
+    primaryContact: 'Priya Raman, Practice Manager',
+  });
+
+  tenant.setClientProfiles(client.id, ['insurer_baseline_2026', 'hipaa_security_rule']);
+
+  const answers: Record<string, unknown> = {
+    mfa_coverage: 'admins_only',
+    edr_deployment: 72,
+    tested_backups: 'untested',
+    email_security: 'spf_only',
+    access_offboarding: 'informal',
+    patch_management: 'scheduled',
+    incident_response_plan: 'none',
+    security_awareness_training: 'onboarding_only',
+    encryption: 'laptops_only',
+  };
+
+  const notes: Record<string, string> = {
+    mfa_coverage: 'Owner pushed back on rollout to clinical staff',
+    tested_backups: 'Veeam job green nightly, never restored from',
+    edr_deployment: '18 of 25 workstations; 7 legacy machines pending replacement',
+  };
+
+  for (const control of listControls(db)) {
+    const raw = answers[control.key];
+    if (raw === undefined) continue;
+    const evaluated = evaluateControl(control, raw);
+    tenant.appendEvidence({
+      clientId: client.id,
+      controlKey: control.key,
+      controlVersion: control.version,
+      answerValue: evaluated.answerValue,
+      answerLabel: evaluated.answerLabel,
+      status: evaluated.status,
+      gapExplanation: evaluated.gap?.consequence ?? null,
+      remediation: evaluated.gap?.fix ?? null,
+      note: notes[control.key] ?? null,
+      source: 'manual',
+      recordedBy: 'A. Okafor (Northwind IT)',
+    });
+  }
+
+  // A second, later record for one control -- this is what makes the evidence
+  // store an audit trail rather than a form.
+  const mfa = getControl(db, 'mfa_coverage')!;
+  const improved = evaluateControl(mfa, 'email_and_remote');
+  tenant.appendEvidence({
+    clientId: client.id,
+    controlKey: mfa.key,
+    controlVersion: mfa.version,
+    answerValue: improved.answerValue,
+    answerLabel: improved.answerLabel,
+    status: improved.status,
+    gapExplanation: improved.gap?.consequence ?? null,
+    remediation: improved.gap?.fix ?? null,
+    note: 'Rollout completed across all clinical and admin staff',
+    source: 'manual',
+    recordedBy: 'A. Okafor (Northwind IT)',
+  });
+
+  const assessment = assessClient(db, tenant, client.id, 'insurer_baseline_2026');
+  const packId = generatePack(
+    db,
+    tenant,
+    'Northwind IT Services',
+    client.id,
+    'insurer_baseline_2026',
+    'A. Okafor (Northwind IT)',
+  );
+
+  console.log(`\nDemo client: ${client.name} (${client.id})`);
+  console.log(`Readiness: ${assessment.score}/100 — ${assessment.stateHeadline}`);
+  console.log(`Top gaps: ${assessment.gaps.slice(0, 3).map((g) => g.title).join(', ')}`);
+  console.log(`Evidence records: ${tenant.evidenceHistory(client.id).length}`);
+  console.log(`\nStart the server and open:  http://localhost:3000/packs/${packId}`);
+}
+
+function reset(): void {
+  for (const suffix of ['', '-shm', '-wal']) {
+    rmSync(join(projectRoot, 'data', `readiness.db${suffix}`), { force: true });
+  }
+  console.log('Database removed. Run `npm run seed` to rebuild it.');
+}
+
+const isEntrypoint =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isEntrypoint) {
+  switch (process.argv[2]) {
+    case 'seed':
+      seed(sharedDb());
+      break;
+    case 'demo':
+      demo(sharedDb());
+      break;
+    case 'reset':
+      reset();
+      break;
+    default:
+      console.error('Usage: tsx src/cli.ts <seed|demo|reset>');
+      process.exit(1);
+  }
+}

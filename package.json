@@ -1,0 +1,28 @@
+{
+  "name": "readiness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Compliance and cyber-insurance readiness platform for MSPs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "seed": "tsx src/cli.ts seed",
+    "demo": "tsx src/cli.ts demo",
+    "reset": "tsx src/cli.ts reset",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^8.0.2",
+    "better-sqlite3": "^12.4.1",
+    "fastify": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
