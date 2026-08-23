@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
+    "setup": "tsx src/cli.ts setup",
     "seed": "tsx src/cli.ts seed",
     "demo": "tsx src/cli.ts demo",
     "reset": "tsx src/cli.ts reset",

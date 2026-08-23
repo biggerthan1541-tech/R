@@ -1,5 +1,16 @@
 import { html, raw, type SafeHtml } from './html.ts';
 
+/**
+ * Everything a page needs from the request: the per-response CSP nonce, the
+ * CSRF token every form must carry, and who is acting.
+ */
+export type ViewContext = {
+  nonce: string;
+  csrf: string;
+  msp: { name: string };
+  user?: { name: string; roleLabel: string } | null;
+};
+
 const STYLES = `
 :root {
   --ink: #14161a; --muted: #5c6472; --line: #e3e6eb; --bg: #f7f8fa; --card: #ffffff;
@@ -17,6 +28,7 @@ a { color: var(--accent); }
 header.top { background: var(--card); border-bottom: 1px solid var(--line); }
 header.top .wrap { padding: 14px 20px; display: flex; align-items: baseline; gap: 16px; }
 header.top strong { font-size: 15px; letter-spacing: -0.01em; }
+header.top strong a { color: inherit; text-decoration: none; }
 header.top .tenant { color: var(--muted); font-size: 13px; margin-left: auto; }
 h1 { font-size: 26px; letter-spacing: -0.02em; margin: 20px 0 4px; }
 h2 { font-size: 17px; letter-spacing: -0.01em; margin: 32px 0 10px; }
@@ -65,22 +77,38 @@ nav.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 2px; }
 .tab { font-size: 13px; font-weight: 600; padding: 6px 13px; border-radius: 999px; text-decoration: none;
        border: 1px solid var(--line); background: var(--card); color: var(--muted); }
 .tab.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.inline-form { display: inline; }
+.linkish { background: none; border: 0; color: var(--accent); font: inherit; font-size: 13px;
+           padding: 0 0 0 2px; cursor: pointer; text-decoration: underline; }
 `;
 
-export function page(title: string, tenantName: string, body: SafeHtml): string {
+export function page(title: string, ctx: ViewContext, body: SafeHtml): string {
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title.replace(/[<>&]/g, '')}</title>
-<style>${STYLES}</style>
+<style nonce="${ctx.nonce.replace(/[^\w-]/g, '')}">${STYLES}</style>
 </head><body>
 ${html`<header class="top"><div class="wrap">
-  <strong><a href="/" style="color:inherit;text-decoration:none">Readiness</a></strong>
-  <span class="tenant">${tenantName}</span>
+  <strong><a href="/">Readiness</a></strong>
+  <span class="tenant">
+    ${ctx.msp.name}
+    ${ctx.user
+      ? html` &middot; ${ctx.user.name} <span class="pill recommended">${ctx.user.roleLabel}</span>
+          <form method="post" action="/logout" class="inline-form">
+            ${csrfField(ctx)}<button type="submit" class="linkish">Sign out</button>
+          </form>`
+      : ''}
+  </span>
 </div></header>
 <div class="wrap">${body}</div>`}
 </body></html>`;
+}
+
+/** Every state-changing form must include this. The CSRF hook rejects it otherwise. */
+export function csrfField(ctx: ViewContext): SafeHtml {
+  return html`<input type="hidden" name="_csrf" value="${ctx.csrf}">`;
 }
 
 export function statusPill(status: string): SafeHtml {

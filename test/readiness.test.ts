@@ -188,7 +188,7 @@ test('the rendered pack escapes client-supplied text', () => {
   tenant.setClientProfiles(client.id, ['insurer_baseline_2026']);
   const packId = generatePack(db, tenant, 'Alpha Managed IT', client.id, 'insurer_baseline_2026', 'tester');
   const snapshot = JSON.parse(tenant.getPack(packId)!.snapshot) as PackSnapshot;
-  const html = renderEvidencePack(snapshot);
+  const html = renderEvidencePack(snapshot, 'test-nonce');
 
   assert.ok(!html.includes('<script>alert(1)</script>'));
   assert.ok(html.includes('&lt;script&gt;'));
@@ -199,7 +199,7 @@ test('the pack renders every control and every gap', () => {
   record(db, tenant, clientId, { ...PERFECT, mfa_coverage: 'admins_only', tested_backups: 'none' });
   const packId = generatePack(db, tenant, 'Alpha Managed IT', clientId, 'insurer_baseline_2026', 'tester');
   const snapshot = JSON.parse(tenant.getPack(packId)!.snapshot) as PackSnapshot;
-  const html = renderEvidencePack(snapshot);
+  const html = renderEvidencePack(snapshot, 'test-nonce');
 
   for (const control of snapshot.assessment.controls) {
     assert.ok(html.includes(control.title), `pack is missing ${control.title}`);

@@ -2,10 +2,10 @@ import type { ClientRow, EvidenceRow, PackRow } from '../db/tenant.ts';
 import type { Assessment } from '../domain/readiness.ts';
 import type { Control, ProfileDefinition } from '../domain/types.ts';
 import { formatDate, formatDateTime, html, raw, type SafeHtml } from './html.ts';
-import { page, requirementPill, statusPill } from './layout.ts';
+import { csrfField, page, requirementPill, statusPill, type ViewContext } from './layout.ts';
 
 export function clientsPage(
-  mspName: string,
+  ctx: ViewContext,
   clients: ClientRow[],
   flash: { ok?: string; err?: string } = {},
 ): string {
@@ -14,7 +14,7 @@ export function clientsPage(
     ${flash.ok ? html`<div class="ok">${flash.ok}</div>` : ''}
 
     <h1>Clients</h1>
-    <p class="lede">Every client below belongs to ${mspName}. Nothing from another provider is reachable from here.</p>
+    <p class="lede">Every client below belongs to ${ctx.msp.name}. Nothing from another provider is reachable from here.</p>
 
     ${clients.length === 0
       ? html`<div class="card"><p class="muted" style="margin:0">
@@ -38,6 +38,7 @@ export function clientsPage(
 
     <h2>Add a client</h2>
     <form method="post" action="/clients" class="card">
+      ${csrfField(ctx)}
       <div class="row">
         <div><label for="name">Company name</label><input type="text" id="name" name="name" required></div>
         <div><label for="industry">Industry</label><input type="text" id="industry" name="industry"></div>
@@ -49,11 +50,11 @@ export function clientsPage(
       <div style="margin-top:14px"><button type="submit">Add client</button></div>
     </form>
   `;
-  return page('Clients', mspName, body);
+  return page('Clients', ctx, body);
 }
 
 export function clientPage(input: {
-  mspName: string;
+  ctx: ViewContext;
   client: ClientRow;
   controls: Control[];
   current: Map<string, EvidenceRow>;
@@ -63,7 +64,7 @@ export function clientPage(input: {
   packs: PackRow[];
   flash: { ok?: string; err?: string };
 }): string {
-  const { client, controls, current, profiles, assignedProfiles, assessment, packs, flash } = input;
+  const { ctx, client, controls, current, profiles, assignedProfiles, assessment, packs, flash } = input;
 
   const body = html`
     ${flash.err ? html`<div class="err">${flash.err}</div>` : ''}
@@ -98,6 +99,7 @@ export function clientPage(input: {
           </div>
           <div class="card tight"><p class="small" style="margin:0">${assessment.stateExplanation}</p></div>
           <form method="post" action="/clients/${client.id}/packs" style="margin:14px 0 0">
+            ${csrfField(ctx)}
             <input type="hidden" name="profileKey" value="${assessment.profile.key}">
             <div class="row">
               <div style="flex:0 0 240px">
@@ -114,6 +116,7 @@ export function clientPage(input: {
 
     <h2>Requirement profiles</h2>
     <form method="post" action="/clients/${client.id}/profiles" class="card">
+      ${csrfField(ctx)}
       <p class="hint" style="margin-top:0">
         Which obligations does this client have to satisfy? Scoring and the evidence pack are always
         relative to a profile, so at least one is needed. Profiles are data --
@@ -135,6 +138,7 @@ export function clientPage(input: {
 
     <h2>Record where this client stands</h2>
     <form method="post" action="/clients/${client.id}/evidence" class="card">
+      ${csrfField(ctx)}
       <div class="row" style="margin-bottom:6px">
         <div style="flex:0 0 260px">
           <label for="recordedBy">Recorded by</label>
@@ -177,7 +181,7 @@ export function clientPage(input: {
       </p>
     </div>
   `;
-  return page(client.name, input.mspName, body);
+  return page(client.name, ctx, body);
 }
 
 function controlField(
@@ -238,7 +242,7 @@ function answerInput(control: Control, currentValue: unknown): SafeHtml {
 }
 
 export function historyPage(input: {
-  mspName: string;
+  ctx: ViewContext;
   client: ClientRow;
   records: EvidenceRow[];
   controls: Map<string, Control>;
@@ -279,10 +283,10 @@ export function historyPage(input: {
           </tbody>
         </table></div>`}
   `;
-  return page(`History — ${client.name}`, input.mspName, body);
+  return page(`History — ${client.name}`, input.ctx, body);
 }
 
-export function errorPage(mspName: string, message: string): string {
-  return page('Error', mspName, html`<h1>Something went wrong</h1><div class="err">${message}</div>
+export function errorPage(ctx: ViewContext, message: string): string {
+  return page('Error', ctx, html`<h1>Something went wrong</h1><div class="err">${message}</div>
     <p><a href="/">Back to clients</a></p>`);
 }

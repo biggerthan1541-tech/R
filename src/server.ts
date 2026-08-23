@@ -1,6 +1,19 @@
 import formbody from '@fastify/formbody';
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest } from 'fastify';
 import { pathToFileURL } from 'node:url';
+import { readEnv, type Env } from './config/env.ts';
+import { BODY_LIMIT, registerSecurity } from './http/security.ts';
+import {
+  clientIdParam,
+  configKey,
+  HttpError,
+  keyList,
+  optionalCount,
+  optionalText,
+  packIdParam,
+  requiredText,
+} from './http/validation.ts';
+import type { ViewContext } from './render/layout.ts';
 import { db as sharedDb, type Db } from './db/connection.ts';
 import { firstMsp, getMspBySlug, type Msp } from './db/msps.ts';
 import { forTenant, type NewEvidence, type TenantDb } from './db/tenant.ts';
@@ -29,14 +42,21 @@ function activeMsp(db: Db): Msp {
   return row;
 }
 
-export function buildServer(db: Db = sharedDb()) {
-  const app = Fastify({ logger: false });
-  app.register(formbody);
+export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
+  const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT });
+  app.register(formbody, { bodyLimit: BODY_LIMIT });
+  registerSecurity(app, { secret: env.sessionSecret, secureCookies: env.secureCookies });
 
   const scope = (): { msp: Msp; tenant: TenantDb } => {
     const msp = activeMsp(db);
     return { msp, tenant: forTenant(db, msp.id) };
   };
+
+  const view = (request: FastifyRequest, msp: Msp): ViewContext => ({
+    nonce: request.cspNonce,
+    csrf: request.csrfToken,
+    msp: { name: msp.name },
+  });
 
   const flashOf = (query: unknown) => {
     const q = (query ?? {}) as Record<string, string>;
@@ -45,43 +65,47 @@ export function buildServer(db: Db = sharedDb()) {
 
   app.setErrorHandler((error: Error, request, reply) => {
     request.log?.error?.(error);
-    let mspName = 'Readiness';
+    const fallback: ViewContext = {
+      nonce: request.cspNonce ?? '',
+      csrf: request.csrfToken ?? '',
+      msp: { name: 'Readiness' },
+    };
     try {
-      mspName = activeMsp(db).name;
+      fallback.msp = { name: activeMsp(db).name };
     } catch {
       /* no tenant yet -- fall through with the generic name */
     }
-    reply.code(500).type('text/html').send(errorPage(mspName, error.message));
+    // HttpError carries our own status; Fastify's own errors (413, 400 from the
+    // body parser) carry statusCode. Anything else is a genuine 500.
+    const fastifyStatus = (error as unknown as { statusCode?: number }).statusCode;
+    const status = error instanceof HttpError ? error.status : (fastifyStatus ?? 500);
+    reply.code(status).type('text/html').send(errorPage(fallback, error.message));
   });
 
   // -- clients ---------------------------------------------------------------
 
   app.get('/', async (request, reply) => {
     const { msp, tenant } = scope();
-    reply.type('text/html').send(clientsPage(msp.name, tenant.listClients(), flashOf(request.query)));
+    reply.type('text/html').send(clientsPage(view(request, msp), tenant.listClients(), flashOf(request.query)));
   });
 
   app.post('/clients', async (request, reply) => {
     const { tenant } = scope();
-    const body = request.body as Record<string, string>;
-    const name = (body.name ?? '').trim();
-    if (!name) return reply.redirect('/?err=' + encodeURIComponent('A company name is required.'));
-
-    const employeeCount = body.employeeCount ? Number(body.employeeCount) : null;
+    const name = requiredText(request.body, 'name', 'Company name');
     const client = tenant.createClient({
       name,
-      industry: body.industry?.trim() || null,
-      employeeCount: Number.isFinite(employeeCount) ? employeeCount : null,
-      primaryContact: body.primaryContact?.trim() || null,
+      industry: optionalText(request.body, 'industry'),
+      employeeCount: optionalCount(request.body, 'employeeCount'),
+      primaryContact: optionalText(request.body, 'primaryContact'),
     });
     reply.redirect(`/clients/${client.id}?ok=` + encodeURIComponent(`${name} added. Assign a profile and record their controls.`));
   });
 
   app.get('/clients/:id', async (request, reply) => {
     const { msp, tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = clientIdParam(request.params);
     const client = tenant.getClient(id);
-    if (!client) return reply.code(404).type('text/html').send(errorPage(msp.name, 'No such client.'));
+    if (!client) return reply.code(404).type('text/html').send(errorPage(view(request, msp), 'No such client.'));
 
     const assignedProfiles = tenant.listClientProfiles(id);
     const query = (request.query ?? {}) as Record<string, string>;
@@ -90,7 +114,7 @@ export function buildServer(db: Db = sharedDb()) {
 
     reply.type('text/html').send(
       clientPage({
-        mspName: msp.name,
+        ctx: view(request, msp),
         client,
         controls: listControls(db),
         current: tenant.currentEvidence(id),
@@ -105,12 +129,11 @@ export function buildServer(db: Db = sharedDb()) {
 
   app.post('/clients/:id/profiles', async (request, reply) => {
     const { tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = clientIdParam(request.params);
     if (!tenant.getClient(id)) return reply.code(404).send('No such client.');
 
-    const raw = (request.body as Record<string, unknown>).profileKey;
-    const keys = raw === undefined ? [] : Array.isArray(raw) ? raw.map(String) : [String(raw)];
     const known = new Set(listProfiles(db).map((p) => p.key));
+    const keys = keyList(request.body, 'profileKey', 'requirement profile');
     tenant.setClientProfiles(id, keys.filter((key) => known.has(key)));
 
     reply.redirect(`/clients/${id}?ok=` + encodeURIComponent('Requirement profiles updated.'));
@@ -120,11 +143,11 @@ export function buildServer(db: Db = sharedDb()) {
 
   app.post('/clients/:id/evidence', async (request, reply) => {
     const { tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = clientIdParam(request.params);
     if (!tenant.getClient(id)) return reply.code(404).send('No such client.');
 
     const body = request.body as Record<string, string>;
-    const recordedBy = (body.recordedBy ?? '').trim() || 'unknown';
+    const recordedBy = requiredText(body, 'recordedBy', 'Recorded by', 120);
     const current = tenant.currentEvidence(id);
     const pending: NewEvidence[] = [];
     const problems: string[] = [];
@@ -182,14 +205,14 @@ export function buildServer(db: Db = sharedDb()) {
 
   app.get('/clients/:id/history', async (request, reply) => {
     const { msp, tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = clientIdParam(request.params);
     const client = tenant.getClient(id);
-    if (!client) return reply.code(404).type('text/html').send(errorPage(msp.name, 'No such client.'));
+    if (!client) return reply.code(404).type('text/html').send(errorPage(view(request, msp), 'No such client.'));
 
     const controlFilter = ((request.query ?? {}) as Record<string, string>).control ?? null;
     reply.type('text/html').send(
       historyPage({
-        mspName: msp.name,
+        ctx: view(request, msp),
         client,
         records: tenant.evidenceHistory(id, controlFilter ?? undefined),
         controls: new Map(listControls(db).map((control) => [control.key, control])),
@@ -202,26 +225,29 @@ export function buildServer(db: Db = sharedDb()) {
 
   app.post('/clients/:id/packs', async (request, reply) => {
     const { msp, tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = clientIdParam(request.params);
     const client = tenant.getClient(id);
     if (!client) return reply.code(404).send('No such client.');
 
     const body = request.body as Record<string, string>;
-    const profileKey = body.profileKey ?? '';
+    const profileKey = configKey(body.profileKey, 'requirement profile');
     if (!tenant.listClientProfiles(id).includes(profileKey)) {
       return reply.redirect(`/clients/${id}?err=` + encodeURIComponent('That profile is not assigned to this client.'));
     }
 
-    const packId = generatePack(db, tenant, msp.name, id, profileKey, (body.generatedBy ?? '').trim() || 'unknown');
+    const generatedBy = requiredText(body, 'generatedBy', 'Generated by', 120);
+    const packId = generatePack(db, tenant, msp.name, id, profileKey, generatedBy);
     reply.redirect(`/packs/${packId}`);
   });
 
   app.get('/packs/:id', async (request, reply) => {
     const { msp, tenant } = scope();
-    const { id } = request.params as { id: string };
+    const id = packIdParam(request.params);
     const pack = tenant.getPack(id);
-    if (!pack) return reply.code(404).type('text/html').send(errorPage(msp.name, 'No such evidence pack.'));
-    reply.type('text/html').send(renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot));
+    if (!pack) {
+      return reply.code(404).type('text/html').send(errorPage(view(request, msp), 'No such evidence pack.'));
+    }
+    reply.type('text/html').send(renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot, request.cspNonce));
   });
 
   return app;
@@ -277,10 +303,12 @@ const isEntrypoint =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isEntrypoint) {
+  // readEnv throws before anything else happens if configuration is missing.
+  const env = readEnv();
   const db = sharedDb();
   syncConfig(db);
-  const port = Number(process.env.PORT ?? 3000);
-  buildServer(db)
+  const port = env.port;
+  buildServer(db, env)
     .listen({ port, host: '0.0.0.0' })
     .then(() => {
       const msp = activeMsp(db);

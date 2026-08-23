@@ -76,6 +76,8 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
           font-family: ui-sans-serif, -apple-system, sans-serif; font-size: 11.5px; color: var(--muted); }
 .footer code { font-size: 11px; }
 .noprint { text-align: center; margin: 16px auto; max-width: 820px; font-family: ui-sans-serif, sans-serif; font-size: 13px; }
+.noprint button { font: inherit; font-weight: 600; padding: 8px 16px; border: 1px solid #1f4fd8;
+                  background: #1f4fd8; color: #fff; border-radius: 6px; cursor: pointer; }
 @media print {
   body { background: #fff; }
   .sheet { margin: 0; max-width: none; padding: 0; }
@@ -84,12 +86,12 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
 }
 `;
 
-export function renderEvidencePack(snapshot: PackSnapshot): string {
+export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): string {
   const { assessment: a, client, msp } = snapshot;
   const passing = a.controls.filter((c) => c.status === 'pass');
 
   const body = html`<div class="noprint">
-  <button onclick="window.print()" style="font:inherit;padding:7px 15px;border:1px solid #1f4fd8;background:#1f4fd8;color:#fff;border-radius:6px;cursor:pointer">Save as PDF</button>
+  <button id="print" type="button">Save as PDF</button>
 </div>
 <div class="sheet">
   <div class="brandbar">
@@ -226,13 +228,18 @@ export function renderEvidencePack(snapshot: PackSnapshot): string {
   </div>
 </div>`;
 
+  // The nonce is echoed into the CSP header for this response; inline style and
+  // script are allowed only because they carry it.
+  const safeNonce = nonce.replace(/[^\w-]/g, '');
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evidence Pack -- ${client.name.replace(/[<>&"]/g, '')}</title>
-<style>${PACK_STYLES}</style>
-</head><body>${body}</body></html>`;
+<style nonce="${safeNonce}">${PACK_STYLES}</style>
+</head><body>${body}
+<script nonce="${safeNonce}">document.getElementById('print').addEventListener('click',function(){window.print()});</script>
+</body></html>`;
 }
 
 function statusWord(status: string): string {
