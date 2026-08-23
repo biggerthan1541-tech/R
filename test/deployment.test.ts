@@ -72,6 +72,79 @@ test('the health check stays reachable over plain http for the load balancer', a
 
 // -- portal links behind a proxy -------------------------------------------
 
+/** Signs up a practice and returns a cookie plus a client with a generated pack. */
+async function practiceWithPack(app: ReturnType<typeof buildServer>) {
+  const form = await app.inject({ method: 'GET', url: '/signup' });
+  const csrfCookie = /rd_csrf=([^;]+)/.exec(String(form.headers['set-cookie']))![1]!;
+  const csrf = /name="_csrf" value="([^"]+)"/.exec(form.body)![1]!;
+  const signup = await app.inject({
+    method: 'POST', url: '/signup', headers: { cookie: `rd_csrf=${csrfCookie}` },
+    payload: {
+      mspName: 'Northwind IT', name: 'J. Bell', email: 'j.bell@northwind.example',
+      password: 'a-long-enough-password', _csrf: csrf,
+    },
+  });
+  const session = /rd_session=([^;]+)/.exec(String(signup.headers['set-cookie']))![1]!;
+  const cookie = `rd_csrf=${csrfCookie}; rd_session=${session}`;
+
+  const created = await postForm(app, cookie, '/clients',
+    { name: 'Harbour Dental Group', profileKey: 'insurer_baseline_2026' }, '/');
+  const clientId = String(created.headers.location).replace('/clients/', '').replace(/\?.*/, '');
+
+  const pack = await postForm(app, cookie, `/clients/${clientId}/packs`,
+    { profileKey: 'insurer_baseline_2026' }, `/clients/${clientId}`);
+  const packId = String(pack.headers.location).replace('/packs/', '');
+
+  return { cookie, clientId, packId };
+}
+
+/** Issues a portal link and returns the absolute URL handed to the operator. */
+async function issueLink(
+  app: ReturnType<typeof buildServer>,
+  ctx: { cookie: string; clientId: string; packId: string },
+  headers: Record<string, string> = {},
+) {
+  const page = await app.inject({ method: 'GET', url: `/clients/${ctx.clientId}`, headers: { cookie: ctx.cookie } });
+  const token = /name="_csrf" value="([^"]+)"/.exec(page.body)![1]!;
+  const shared = await app.inject({
+    method: 'POST', url: `/clients/${ctx.clientId}/portal`,
+    headers: { cookie: ctx.cookie, ...headers },
+    payload: { packId: ctx.packId, _csrf: token },
+  });
+  return new URL(String(shared.headers.location), 'http://localhost').searchParams.get('portalUrl')!;
+}
+
+test('a client link is https when the proxy says the request was https', async () => {
+  // The trustProxy bug in full: behind Caddy the connection to this process is
+  // plain http, and the client's real scheme arrives only in x-forwarded-proto.
+  // Without trustProxy, Fastify reports "http" and every link handed to a client
+  // is insecure. PUBLIC_URL is deliberately unset here so nothing masks it.
+  const db = testDb();
+  const app = buildServer(db, { ...TEST_ENV, publicUrl: null });
+  const ctx = await practiceWithPack(app);
+
+  const url = await issueLink(app, ctx, {
+    'x-forwarded-proto': 'https',
+    host: 'readiness.example.com',
+  });
+
+  assert.ok(
+    url.startsWith('https://readiness.example.com/portal/'),
+    `link must be https behind a TLS-terminating proxy, got ${url}`,
+  );
+});
+
+test('the same request without the proxy header stays http, proving the header is what decides', async () => {
+  // Guards against the test above passing for the wrong reason.
+  const db = testDb();
+  const app = buildServer(db, { ...TEST_ENV, publicUrl: null });
+  const ctx = await practiceWithPack(app);
+
+  const url = await issueLink(app, ctx, { host: 'readiness.example.com' });
+
+  assert.ok(url.startsWith('http://'), `expected plain http without the proxy header, got ${url}`);
+});
+
 test('a poisoned Host header cannot redirect a client portal link', async () => {
   const db = testDb();
   const mspId = ensureMsp(db, 'alpha', 'Alpha Managed IT');

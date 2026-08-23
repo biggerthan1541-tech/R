@@ -104,11 +104,33 @@ jobs:
             }).catch((e) => { console.error(e); process.exit(1); });
           "
 
-          echo "--- and a backup taken from one container restores in another ---"
-          docker run --rm -v readiness-persist:/data readiness:ci \
-            node_modules/.bin/tsx src/cli.ts backup | head -2
+          echo "--- a backup lands on the HOST filesystem, ready to copy away ---"
+          # This is the arrangement compose uses: /backups is a bind mount, not
+          # part of the volume, so the file is reachable by scp. A backup that
+          # only exists inside the volume dies with the volume.
+          mkdir -p "$PWD/host-backups" && chmod 777 "$PWD/host-backups"
+          docker run --rm -v readiness-persist:/data -v "$PWD/host-backups:/backups" \
+            -e BACKUP_DIR=/backups readiness:ci node_modules/.bin/tsx src/cli.ts backup | head -2
 
-          docker volume rm readiness-persist >/dev/null
+          ls -la host-backups/
+          test -n "$(ls host-backups/*.db 2>/dev/null)" || { echo "no backup on the host"; exit 1; }
+
+          echo "--- and that file restores onto an empty volume ---"
+          docker volume create readiness-rebuilt >/dev/null
+          BACKUP=$(basename "$(ls host-backups/*.db | head -1)")
+          docker run --rm -v readiness-rebuilt:/data -v "$PWD/host-backups:/backups" \
+            readiness:ci node_modules/.bin/tsx src/cli.ts restore "/backups/$BACKUP" | head -2
+
+          docker run --rm -v readiness-rebuilt:/data readiness:ci node -e "
+            import('/app/src/db/connection.ts').then(async (m) => {
+              const db = m.openDatabase();
+              const clients = db.prepare('SELECT name FROM clients').all();
+              console.log('clients on the rebuilt volume:', JSON.stringify(clients));
+              if (clients.length === 0) { console.error('RESTORE PRODUCED NOTHING'); process.exit(1); }
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+          docker volume rm readiness-persist readiness-rebuilt >/dev/null
 
       - name: Log in to the registry
         # Pull requests from forks get no token, and publishing an unreviewed

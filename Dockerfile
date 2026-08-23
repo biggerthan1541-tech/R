@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CHROME_PATH=/usr/bin/chromium \
     NODE_ENV=production \
     DATABASE_FILE=/data/readiness.db \
-    BACKUP_DIR=/data/backups \
+    BACKUP_DIR=/backups \
     PORT=3000
 
 WORKDIR /app
@@ -40,7 +40,7 @@ COPY . .
 VOLUME ["/data"]
 
 # Run unprivileged. The node user ships with the base image.
-RUN mkdir -p /data && chown -R node:node /data /app
+RUN mkdir -p /data /backups && chown -R node:node /data /backups /app
 USER node
 
 EXPOSE 3000

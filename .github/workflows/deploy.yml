@@ -38,6 +38,8 @@ jobs:
 
       - name: Copy the compose files across
         run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p /opt/readiness && install -d -o 1000 -g 1000 /opt/readiness/backups"
           scp -i ~/.ssh/id_ed25519 docker-compose.yml Caddyfile \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/readiness/"
 

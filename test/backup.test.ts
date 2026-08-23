@@ -130,6 +130,55 @@ test('a corrupt or foreign file is refused before anything is replaced', async (
   }
 });
 
+test('a backup written to a separate location restores onto a clean machine', async () => {
+  // This is the disaster path the runbook describes: the backup was copied off
+  // the server, the server is gone, and the file has to become a working
+  // database somewhere else entirely.
+  const server = workspace();
+  const elsewhere = workspace();      // stands in for your own computer
+  const replacement = workspace();    // stands in for the rebuilt server
+  try {
+    const { mspId, clientId } = seedClient(server.dbFile, 'Harbour Dental Group');
+
+    // Backup goes to a directory outside the database's own folder -- the
+    // bind-mounted /backups on a real server, reachable by scp.
+    const exported = join(elsewhere.dir, 'pulled-off-the-server.db');
+    const result = await backupTo(exported, server.dbFile);
+    assert.equal(result.integrity, 'ok');
+
+    // The original server is destroyed, database and all.
+    server.cleanup();
+
+    // The file alone rebuilds the service on fresh hardware.
+    restoreFrom(exported, replacement.dbFile);
+
+    const rebuilt = openDatabase(replacement.dbFile);
+    const tenant = forTenant(rebuilt, mspId);
+    assert.deepEqual(tenant.listClients().map((c) => c.name), ['Harbour Dental Group']);
+    assert.equal(tenant.evidenceHistory(clientId).length, 1);
+    assert.equal(tenant.listClientProfiles(clientId).length, 1, 'profile assignments must come back too');
+    rebuilt.close();
+  } finally {
+    elsewhere.cleanup();
+    replacement.cleanup();
+  }
+});
+
+test('backup accepts an explicit filename as well as a directory', async () => {
+  const ws = workspace();
+  try {
+    seedClient(ws.dbFile, 'Harbour Dental Group');
+
+    const named = join(ws.dir, 'before-the-upgrade.db');
+    const result = await backupTo(named, ws.dbFile);
+
+    assert.equal(result.file, named);
+    assert.ok(existsSync(named));
+  } finally {
+    ws.cleanup();
+  }
+});
+
 test('a missing backup file fails loudly', () => {
   assert.throws(() => restoreFrom('/nonexistent/backup.db'), /No such backup/);
 });

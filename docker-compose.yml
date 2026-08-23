@@ -17,7 +17,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_FILE: /data/readiness.db
-      BACKUP_DIR: /data/backups
+      # Backups go to the bind-mounted folder below, not into the volume: a
+      # backup you cannot reach from the host is a backup you cannot take away,
+      # and it dies with the disk it is sitting on.
+      BACKUP_DIR: /backups
       # From the .env file sitting next to this one.
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
       PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
@@ -27,6 +30,8 @@ services:
       # survives a redeploy: the volume is storage that exists independently of
       # the container, so replacing the container leaves it untouched.
       - readiness-data:/data
+      # Appears on the server at /opt/readiness/backups, ready to scp.
+      - ./backups:/backups
     expose:
       - "3000"
     healthcheck:

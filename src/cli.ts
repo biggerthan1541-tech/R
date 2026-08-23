@@ -172,13 +172,30 @@ function setup(): void {
   console.log('Wrote .env with a freshly generated SESSION_SECRET.');
 }
 
-async function backup(): Promise<void> {
+/**
+ * `npm run backup` writes into BACKUP_DIR; `npm run backup -- /some/where`
+ * overrides it, either with a directory or an exact filename.
+ *
+ * On a server BACKUP_DIR points at a directory bind-mounted from the host, so
+ * the file lands somewhere `scp` can reach. A backup that only exists inside
+ * the same volume as the database dies with that volume.
+ */
+async function backup(destination: string | undefined): Promise<void> {
   const dir = process.env.BACKUP_DIR ?? join(projectRoot, 'backups');
-  const result = await backupTo(backupPath(dir));
+  const target =
+    destination === undefined
+      ? backupPath(dir)
+      : destination.endsWith('.db')
+        ? destination
+        : backupPath(destination);
+
+  const result = await backupTo(target);
   console.log(`Backed up to ${result.file}`);
   console.log(`  ${describeBackup(result)}`);
-  console.log('\nCopy it somewhere else — a backup on the same disk as the database');
-  console.log('does not survive losing that disk.');
+  console.log('');
+  console.log('Now copy it off this machine. From your own computer:');
+  console.log(`  scp YOUR_SERVER:${result.file} .`);
+  console.log('A backup on the same disk as the database does not survive losing that disk.');
 }
 
 function restore(file: string | undefined): void {
@@ -216,7 +233,7 @@ if (isEntrypoint) {
         await demo(sharedDb());
         break;
       case 'backup':
-        await backup();
+        await backup(process.argv[3]);
         break;
       case 'restore':
         restore(process.argv[3]);
@@ -225,7 +242,9 @@ if (isEntrypoint) {
         reset();
         break;
       default:
-        console.error('Usage: tsx src/cli.ts <setup|seed|demo|backup|restore <file>|reset>');
+        console.error(
+          'Usage: tsx src/cli.ts <setup|seed|demo|backup [dir-or-file]|restore <file>|reset>',
+        );
         process.exit(1);
     }
   })();

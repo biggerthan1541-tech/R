@@ -130,50 +130,67 @@ version, and checks the site is answering afterwards.
 tags in the run summary — open Actions → CI → the run you want, and the codes are
 at the bottom.
 
-### Take a backup
+### Take a backup, and get it off the server
+
+Backups are written to `/opt/readiness/backups` on the server — a normal folder,
+not hidden inside Docker — so you can copy them straight to your own computer.
+
+**On the server**, take the backup:
 
 ```bash
-ssh root@YOUR_SERVER_IP
-cd /opt/readiness
-docker compose exec app npm run backup
+ssh root@YOUR_SERVER_IP "cd /opt/readiness && docker compose exec -T app npm run backup"
 ```
 
 It prints something like:
 
 ```
-Backed up to /data/backups/readiness-2026-08-23T17-04-11.db
+Backed up to /backups/readiness-2026-08-23T17-04-11.db
   readiness-2026-08-23T17-04-11.db  0.42 MB  schema v2  integrity ok
 ```
 
-**Copy it off the server.** A backup sitting on the same disk as the database
-does not survive losing that disk. From your own machine:
+**On your own computer**, pull it down. This is the command that matters — a
+backup still sitting on the server is not protection against losing the server:
 
 ```bash
-scp root@YOUR_SERVER_IP:/opt/readiness-backups/*.db ~/Desktop/
+scp root@YOUR_SERVER_IP:/opt/readiness/backups/*.db ~/Desktop/
 ```
 
-To make that possible, run the backup with the folder shared out:
+To fetch just the most recent one:
 
 ```bash
-docker compose cp app:/data/backups /opt/readiness-backups
+scp root@YOUR_SERVER_IP:"$(ssh root@YOUR_SERVER_IP 'ls -t /opt/readiness/backups/*.db | head -1')" ~/Desktop/
 ```
 
-> Worth doing before anything you are nervous about, and on a routine you can
-> keep. A backup you have never copied off the machine is a backup you do not
-> have.
+> `/backups` inside the container is `/opt/readiness/backups` on the server.
+> They are the same folder.
+
+Do this before anything you are nervous about, and on a routine you will
+actually keep. Old ones are safe to delete once you have newer copies stored
+somewhere else.
 
 ### Restore a backup
 
 This replaces all current data with the contents of the backup. Take a fresh
 backup first if there is anything you want to keep.
 
+If the file is already on the server:
+
 ```bash
 ssh root@YOUR_SERVER_IP
 cd /opt/readiness
 docker compose stop app
-docker compose run --rm app npm run restore -- /data/backups/THE-FILE-YOU-WANT.db
+docker compose run --rm app npm run restore -- /backups/THE-FILE-YOU-WANT.db
 docker compose start app
 ```
+
+If you are restoring a copy from your own computer — a rebuilt server, or the
+old one is gone — send it up first:
+
+```bash
+scp ~/Desktop/readiness-2026-08-23T17-04-11.db root@YOUR_SERVER_IP:/opt/readiness/backups/
+```
+
+then run the same commands above against that filename.
 
 It refuses anything that is not a valid Readiness database, and it keeps the
 database it replaced (as a file ending `.replaced-…`), so restoring the wrong
