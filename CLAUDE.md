@@ -8,7 +8,7 @@ This file documents the repository, development conventions, and environment con
 
 `biggerthan1541-tech/R` is **Readiness** — a compliance and cyber-insurance-readiness platform for SMBs, sold through the MSP channel. See `README.md` for the product shape, the data model, and how to run it.
 
-Built in phases; **Phase 1 is complete** (evidence core + single-client flow). Phases 2–4 (MSP console and auth, white-label output, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
+Built in phases; **Phases 1 and 2 are complete** (evidence core + single-client flow; identity, access control, roll-up console, client portal, audit log). Phases 3–4 (white-label output and scheduled generation, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
 
 ### Stack
 
@@ -16,10 +16,16 @@ Node 22 + TypeScript (ESM, no build step, run via `tsx`), Fastify, SQLite via `b
 
 ### Non-negotiables
 
-- **Tenant isolation.** All customer data goes through the scoped repository in `src/db/tenant.ts`. Never hand a raw `Db` handle to anything outside `src/db/`, and never add a tenant-scoped table without a composite foreign key onto `clients (msp_id, id)` plus an entry in `TENANT_SCOPED_TABLES`.
-- **The evidence log is append-only.** No `UPDATE` or `DELETE` path for `evidence_records`, ever. Current state is the highest `seq`.
-- **Control and profile logic is data.** Pass/fail rules and gap copy live in `config/`, never in `src/`. Nothing under `src/domain/` should know what MFA is.
+These are enforced by tests, not just convention — `test/no-raw-sql.test.ts` and `test/access.test.ts` fail the build if any is broken.
+
+- **No SQL outside `src/db/`.** All customer data goes through the scoped repository in `src/db/tenant.ts`, and no module other than `tenant.ts` may query a tenant-scoped table. Never add a tenant-scoped table without a composite foreign key onto its parent plus an entry in `TENANT_SCOPED_TABLES`. The single pre-auth exception is `lookupTenantForLogin`, which returns an msp id and nothing else.
+- **The evidence log is append-only.** No `UPDATE` or `DELETE` path for `evidence_records`, ever. Current state is the highest `seq`. The audit log is the same, plus a per-tenant hash chain.
+- **Control, profile and role logic is data.** Pass/fail rules, gap copy and permissions live in `config/`, never in `src/`. Nothing under `src/domain/` should know what MFA is, or that an "operator" exists.
 - **Escape everything.** Build HTML with the `html` tag from `src/render/html.ts`; client names and free-text notes reach client-facing documents.
+- **Every form carries CSRF.** Use `csrfField(ctx)` from `src/render/layout.ts`; the hook rejects state-changing requests without it.
+- **Every route declares a permission.** Call `requirePermission(request, '<permission>')` — never `requireActor` alone for anything a role might not be allowed to do.
+- **Migrations are immutable.** Add `src/db/migrations/NNN_*.sql`; never edit one that has shipped. The runner rejects a changed checksum.
+- **No secrets in code.** Configuration comes from `src/config/env.ts`, which fails startup when something required is missing. There are no defaults for signing keys.
 
 ---
 
@@ -121,16 +127,17 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```bash
 npm install
-npm run demo        # seed config + tenant + a worked example client
+npm run setup       # write .env with a generated SESSION_SECRET
+npm run demo        # seed config + tenant + users + a worked example client
 npm start           # http://localhost:3000
 npm run dev         # with reload
 
-npm test            # node:test, no runner dependency
+npm test            # node:test, no runner dependency (85 tests)
 npm run typecheck   # tsc --noEmit
 npm run reset       # delete the database file
 ```
 
-There are no schema migrations yet — `schema.sql` is applied with `CREATE TABLE IF NOT EXISTS`, so a new column needs `npm run reset` to take effect. Add a migration step before real data exists.
+`npm run demo` prints sign-in credentials once. Schema changes go in a new migration file under `src/db/migrations/`; they are applied automatically on open.
 
 ---
 
@@ -142,14 +149,19 @@ R/
 ├── README.md                  ← product, data model, how to verify each phase
 ├── config/
 │   ├── controls.json          ← control definitions, pass/fail rules, gap copy
+│   ├── roles.json             ← roles → permissions
 │   └── profiles/*.json        ← requirement profiles (insurer, CMMC, HIPAA, SOC 2)
 ├── src/
-│   ├── db/                    ← schema.sql, connection, msps, tenant (isolation boundary)
-│   ├── domain/                ← evaluate, config-loader, readiness scoring, types
-│   ├── render/                ← html escaping, layout, operator views, evidence pack
+│   ├── config/env.ts          ← required configuration, validated at startup
+│   ├── db/                    ← migrations, connection, msps, reference, tenant (isolation boundary)
+│   ├── auth/                  ← passwords (scrypt), tokens, sessions, permission checks
+│   ├── http/                  ← cookies, security (CSP/CSRF/headers), validation
+│   ├── domain/                ← evaluate, config-loader, readiness scoring, roles, types
+│   ├── render/                ← html escaping, layout, console/client views, auth views, evidence pack
 │   ├── server.ts              ← Fastify routes
-│   └── cli.ts                 ← seed / demo / reset
-└── test/                      ← isolation, evaluation, scoring, rendering
+│   └── cli.ts                 ← setup / seed / demo / reset
+└── test/                      ← isolation, migrations, no-raw-sql, security, access,
+                                 portal, audit, evaluation, scoring, rendering
 ```
 
 ---

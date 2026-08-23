@@ -7,9 +7,9 @@ each client a dated evidence pack.
 The evidence store is the product. Every answer about every control is appended, never
 overwritten, so a client's posture has a queryable history rather than a current value.
 
-**Status: Phase 1 complete.** Evidence core, manual data entry, profile-based evaluation, and
-per-client evidence packs. Multi-tenancy is built into the data model and enforced at the
-data-access layer from day one, but there is no login yet — that is Phase 2.
+**Status: Phase 2 complete.** Evidence core and single-client flow (Phase 1), plus real
+authentication, data-driven roles, a multi-client roll-up console, a read-only client portal, and
+a tamper-evident operator audit log (Phase 2).
 
 ---
 
@@ -31,21 +31,71 @@ Four runtime dependencies in total. Nothing is generated, bundled, or transpiled
 
 ```bash
 npm install
-npm run demo     # seeds config + one tenant + a worked example client
+npm run setup    # writes .env with a generated SESSION_SECRET
+npm run demo     # seeds config + a tenant + three users + a worked example client
 npm start        # http://localhost:3000
 ```
+
+`npm run demo` prints sign-in credentials for three accounts — an owner, an operator and a
+read-only auditor — and a link to a generated evidence pack. **The passwords are shown once.**
 
 Other commands:
 
 ```bash
-npm run seed     # sync config/ into the database and provision the demo tenant
+npm run seed     # sync config/ into the database, provision the tenant and users
 npm run dev      # same as start, with reload on change
-npm test         # 31 tests
+npm test         # 85 tests
 npm run typecheck
 npm run reset    # delete the database file
 ```
 
-`npm run demo` prints a direct link to a generated evidence pack.
+There is no default signing key: if `SESSION_SECRET` is missing the server refuses to start and
+tells you to run `npm run setup`.
+
+---
+
+## Verifying Phase 2
+
+> *"As one MSP I manage several clients from a single login with clean isolation."*
+
+1. `npm run setup && npm run demo && npm start`, then open <http://localhost:3000>. You are
+   redirected to sign in — there is no unauthenticated surface.
+2. **Sign in as the owner** using the credentials `npm run demo` printed. You land on the
+   roll-up console: every client, worst first, with score, verdict, coverage and biggest gap.
+3. **Onboard a client in one submit** — the *Add a client* form takes the name and the
+   requirement profiles together, then drops you straight on the control form. Name plus one
+   profile is the minimum; everything else is optional.
+4. **Drill in and back out** — open any client, record evidence, generate a pack, return to the
+   console and watch the score move.
+5. **Check role enforcement.** Sign out, sign in as `auditor@…` (read-only). The *Add a client*
+   form, the *Save evidence* button and the profile controls are gone, and the client page says
+   the role is read-only. Posting to those routes anyway returns 403, not a silent no-op.
+6. **Check the audit log** at `/audit`. Every sign-in, client creation, evidence write and pack
+   generation is there, attributed and dated, with the hash chain reported as verified.
+7. **Share a pack with a client.** On a client page, issue a portal link. Open it in a private
+   window — no login, no operator surface, just that one pack. Revoke it and reload: it is gone.
+
+### Verifying tenant isolation by hand
+
+Provision a second MSP with its own owner, sign in as them, and confirm the console is empty and
+the first tenant's client, history, pack and portal URLs all return 404:
+
+```bash
+npx tsx -e "
+import { db } from './src/db/connection.ts';
+import { ensureMsp } from './src/db/msps.ts';
+import { forTenant } from './src/db/tenant.ts';
+import { hashPassword } from './src/auth/passwords.ts';
+const id = ensureMsp(db(), 'rival-msp', 'Rival Managed Services');
+forTenant(db(), id).createUser({
+  email: 'owner@rival.example', name: 'Rival Owner', role: 'owner',
+  passwordHash: await hashPassword('rival-password-12345'), createdBy: null,
+});
+console.log('rival tenant ready: owner@rival.example / rival-password-12345');
+"
+```
+
+`test/access.test.ts` proves the same thing automatically, over HTTP, in both directions.
 
 ---
 
@@ -53,7 +103,7 @@ npm run reset    # delete the database file
 
 > *"I can create a client, enter controls, and generate a pack."*
 
-1. `npm run seed && npm start`, then open <http://localhost:3000>.
+1. `npm run seed && npm start`, then open <http://localhost:3000> and sign in.
 2. **Create a client** — fill in the *Add a client* form. You land on the client page.
 3. **Assign a requirement profile** — tick *Cyber Insurance Baseline Questionnaire* (and any
    others) and save. Scoring is always relative to a profile; with more than one assigned you
@@ -69,31 +119,31 @@ npm run reset    # delete the database file
 7. **Check the pack is frozen** — reopen the pack you generated before that change. It still
    shows the old position, because a pack is an immutable artifact, not a live view.
 
-### Verifying tenant isolation by hand
-
-```bash
-npx tsx -e "import {db} from './src/db/connection.ts'; import {ensureMsp} from './src/db/msps.ts'; ensureMsp(db(),'rival-msp','Rival Managed Services')"
-ACTIVE_MSP_SLUG=rival-msp npm start
-```
-
-Acting as the second MSP, the client list is empty, and pasting the first MSP's client, history
-or pack URL returns 404 — not a redirect, and not someone else's data.
-
 ---
 
 ## Data model
 
 ```
 msps (tenant)
+ ├── users                         operators, with a role from config/roles.json
+ │    └── sessions                 token stored hashed, never in the clear
+ ├── audit_log                     APPEND ONLY + hash chained — who did what
  └── clients                       msp_id + id, UNIQUE (msp_id, id)
       ├── client_profiles          which obligation sets this client must satisfy
-      ├── evidence_records         APPEND ONLY — the audit trail
-      └── evidence_packs           immutable generated artifacts
+      ├── evidence_records         APPEND ONLY — what the controls looked like
+      ├── evidence_packs           immutable generated artifacts
+      └── portal_links             expiring read-only links to one pack
 
 controls              ─┐ global reference data, synced from config/,
 requirement_profiles  ─┤ contains no customer data
 profile_items         ─┘
 ```
+
+### Migrations
+
+`src/db/migrations/NNN_description.sql`, applied in order and recorded with a checksum. Editing a
+migration that has already been applied is rejected — add a new one instead. Migrations run
+automatically when the database is opened.
 
 **Evidence records are never updated or deleted.** There is no code path that does. A control's
 current state is its highest `seq` row — `seq` is an `AUTOINCREMENT` column rather than a
@@ -121,7 +171,46 @@ Three layers, in order of strength:
    call time instead of quietly returning rows.
 
 `test/isolation.test.ts` exercises all three, including a direct attempt by one tenant to write
-evidence against another's client.
+evidence against another's client. `test/no-raw-sql.test.ts` enforces the structural rule that
+makes layer 2 hold: **no database access outside `src/db/`**, and no module other than
+`tenant.ts` may query a tenant-scoped table. New code that reaches for a raw handle fails the
+build rather than quietly opening a hole.
+
+There is exactly one pre-authentication lookup in the codebase — `lookupTenantForLogin` — because
+login is by email alone and the tenant is unknown until the address resolves. It returns an msp id
+and nothing else: no user row, no password hash. The caller then opens a normal scoped `TenantDb`.
+
+### Authentication and roles
+
+| Concern | How |
+|---|---|
+| Passwords | scrypt (`node:crypto`), parameters stored with the hash so cost can be raised later |
+| Sessions | 12h, HttpOnly + SameSite cookie; token stored as sha256; fresh token minted on every login (no fixation); revoked server-side on sign-out and when a user is disabled |
+| CSRF | signed random token in an HttpOnly cookie, mirrored into a hidden field, compared in constant time |
+| Roles | `config/roles.json` — data, not code |
+| Client portal | signed expiring URL to exactly one pack; revocable; views counted |
+| Audit log | append-only and hash-chained per tenant; `/audit` reports whether the chain verifies |
+
+Failed sign-ins report identical wording whether or not the address exists, and the password check
+runs even when no user matched so response time does not leak either.
+
+## Editing roles and permissions
+
+**`config/roles.json`** — three roles ship: owner, operator and read-only. Adding a role or
+changing what one can do needs no code change.
+
+```json
+{
+  "permissions": [{ "key": "evidence:write", "description": "Record a control's state" }],
+  "roles": [
+    { "key": "operator", "label": "Operator", "description": "...",
+      "permissions": ["client:*", "evidence:write", "pack:*", "portal:*", "user:read", "audit:read"] }
+  ]
+}
+```
+
+Grants are exact (`evidence:write`), a group wildcard (`client:*`), or everything (`*`). A grant
+matching no declared permission fails at startup rather than silently removing access.
 
 ---
 
@@ -214,44 +303,65 @@ Gaps in the pack are ordered mandatory-first, then by how much score each one fo
 config/
   controls.json              control definitions + pass/fail rules + gap copy
   profiles/*.json            requirement profiles
+  roles.json                 roles → permissions
 src/
+  config/env.ts              required configuration, validated at startup
   db/
-    schema.sql               tables, composite FKs, the append-only evidence log
-    connection.ts            open + apply schema
+    migrations/*.sql         versioned schema, applied in order
+    migrate.ts               migration runner
+    connection.ts            open + migrate
     msps.ts                  tenant provisioning
+    reference.ts             global reference-data queries
     tenant.ts                THE isolation boundary — scoped repository + SQL guard
+  auth/
+    passwords.ts             scrypt hashing
+    tokens.ts                signed, tenant-bearing session and portal tokens
+    session.ts               sign in/out, actor resolution, permission checks
+  http/
+    cookies.ts               parsing, serialisation, HMAC signing
+    security.ts              CSP + headers + CSRF
+    validation.ts            HTTP-boundary input validation
   domain/
     types.ts
     evaluate.ts              the data-driven rule evaluator (knows nothing about security)
-    config-loader.ts         load, validate and sync config/ into the database
+    config-loader.ts         load and validate config/, sync into the database
     readiness.ts             weighted scoring, verdicts, gap prioritisation
+    roles.ts                 the data-driven permission engine
   render/
     html.ts                  auto-escaping template tag
     layout.ts                operator UI chrome
-    views.ts                 operator UI pages
+    views.ts                 console, client page, history
+    auth-views.ts            sign-in, people, audit, portal links
     evidence-pack.ts         the client-facing document
   server.ts                  routes
-  cli.ts                     seed / demo / reset
-test/                        isolation, evaluation, scoring, rendering
+  cli.ts                     setup / seed / demo / reset
+test/                        isolation, migrations, no-raw-sql, security,
+                             access (negative), portal, audit, evaluation,
+                             scoring, rendering
 ```
 
 ---
 
 ## Deliberately not built yet
 
-Phase 2 — MSP login and the multi-client roll-up console. Phase 3 — per-MSP white-label
-branding and scheduled generation. Phase 4 — wholesale billing records and invoice export.
+Phase 3 — per-MSP white-label branding and scheduled generation. Phase 4 — wholesale billing
+records and invoice export.
 
 Also out of scope by instruction: live integrations with identity/EDR/backup systems (manual
 entry only), payment processing, and any mobile app.
 
-### Known Phase 1 edges
+### Known edges
 
-- **No login.** The acting MSP comes from `ACTIVE_MSP_SLUG` or the first tenant on file.
-  Phase 2 replaces one function (`activeMsp` in `src/server.ts`); nothing else changes, because
-  every read and write already goes through a `TenantDb` scoped to whatever it returns.
-- **No schema migrations.** The schema is applied with `CREATE TABLE IF NOT EXISTS`, so a
-  column added to `schema.sql` will not reach an existing database. Pre-release, `npm run reset`
-  is the answer; a migration step is worth adding before real data exists.
+- **No password reset or invitation email.** An owner sets a temporary password directly. Email
+  delivery is a dependency and a deliverability problem; it is worth doing properly rather than
+  half-doing here.
+- **No rate limiting on sign-in.** Failed attempts are audited, but not throttled. This wants to
+  be per-address and per-IP, and belongs with a deployment story (Phase 4) rather than in-process
+  counters that reset on restart.
+- **Sessions do not roll.** A session lasts 12 hours from sign-in and is not extended by activity.
 - **The evidence pack is HTML.** *Save as PDF* prints it via the browser. If packs need to be
   generated server-side on a schedule (Phase 3), that becomes a headless-Chromium render step.
+- **Onboarding friction that remains.** Creating a client and assigning profiles is one submit,
+  but recording nine controls is still nine decisions. The obvious next win is a per-industry
+  answer template that pre-fills the common baseline — that is Phase 3/4 territory, not something
+  to bolt on here.
