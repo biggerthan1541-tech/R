@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -174,6 +174,21 @@ test('backup accepts an explicit filename as well as a directory', async () => {
 
     assert.equal(result.file, named);
     assert.ok(existsSync(named));
+  } finally {
+    ws.cleanup();
+  }
+});
+
+test('a backup is exactly one file, so there is nothing to guess about', async () => {
+  const ws = workspace();
+  try {
+    seedClient(ws.dbFile, 'Harbour Dental Group');
+    const dir = join(ws.dir, 'offsite');
+    await backupTo(backupPath(dir), ws.dbFile);
+
+    const produced = readdirSync(dir);
+    assert.equal(produced.length, 1, `expected one file to copy, got ${produced.join(', ')}`);
+    assert.match(produced[0]!, /\.db$/);
   } finally {
     ws.cleanup();
   }

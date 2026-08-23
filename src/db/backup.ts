@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, renameSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
 import { openDatabase, projectRoot, type Db } from './connection.ts';
@@ -43,6 +43,10 @@ export async function backupTo(destination: string, sourceFile?: string): Promis
   } finally {
     copy.close();
     if (!sourceFile) source.close();
+    // Opening the copy to verify it creates WAL sidecars. The backup itself is
+    // a complete database without them, and leaving them behind means whoever
+    // follows the runbook has to guess which of three files to copy.
+    for (const suffix of ['-wal', '-shm']) rmSync(`${destination}${suffix}`, { force: true });
   }
 }
 
