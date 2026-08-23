@@ -75,6 +75,19 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
 .footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line);
           font-family: ui-sans-serif, -apple-system, sans-serif; font-size: 11.5px; color: var(--muted); }
 .footer code { font-size: 11px; }
+/* Utility classes exist so the markup needs no inline style attributes: a CSP
+   nonce authorises a stylesheet element but NOT a style attribute, so an inline
+   style here would be silently dropped by the browser. See test/csp.test.ts. */
+.caption { color: var(--muted); font-size: 12px; }
+.muted { color: var(--muted); }
+.mb-lg { margin-bottom: 18px; }
+.t-passing th:nth-child(1), .t-passing td:nth-child(1) { width: 38%; }
+.t-passing th:nth-child(2), .t-passing td:nth-child(2) { width: 37%; }
+.t-passing th:nth-child(3), .t-passing td:nth-child(3) { width: 25%; }
+.t-register th:nth-child(1), .t-register td:nth-child(1) { width: 30%; }
+.t-register th:nth-child(2), .t-register td:nth-child(2) { width: 12%; }
+.t-register th:nth-child(3), .t-register td:nth-child(3) { width: 30%; }
+.t-register th:nth-child(4), .t-register td:nth-child(4) { width: 28%; }
 .noprint { text-align: center; margin: 16px auto; max-width: 820px; font-family: ui-sans-serif, sans-serif; font-size: 13px; }
 .noprint button { font: inherit; font-weight: 600; padding: 8px 16px; border: 1px solid #1f4fd8;
                   background: #1f4fd8; color: #fff; border-radius: 6px; cursor: pointer; }
@@ -134,7 +147,7 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
   ${a.gaps.length > 0
     ? html`
         <h2>What to fix first</h2>
-        <p class="subtitle" style="margin-bottom:18px">
+        <p class="subtitle mb-lg">
           Ordered by how much each gap costs you against this standard. Requirements marked
           <span class="pill fail">Required</span> are the ones that can stop a policy or an audit outright.
         </p>
@@ -167,9 +180,9 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
   ${passing.length > 0
     ? html`
         <h2>What you already have in place</h2>
-        <table>
+        <table class="t-passing">
           <thead>
-            <tr><th style="width:38%">Control</th><th style="width:37%">Position</th><th style="width:25%">Confirmed</th></tr>
+            <tr><th>Control</th><th>Position</th><th>Confirmed</th></tr>
           </thead>
           <tbody>
             ${passing.map(
@@ -185,11 +198,11 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
     : ''}
 
   <h2>Full control register</h2>
-  <table>
+  <table class="t-register">
     <thead>
       <tr>
-        <th style="width:30%">Control</th><th style="width:12%">Status</th>
-        <th style="width:30%">Position on record</th><th style="width:28%">Evidence</th>
+        <th>Control</th><th>Status</th>
+        <th>Position on record</th><th>Evidence</th>
       </tr>
     </thead>
     <tbody>
@@ -197,14 +210,14 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
         (control) => html`<tr>
           <td>
             <strong>${control.title}</strong><br />
-            <span style="color:var(--muted);font-size:12px">${control.category}</span>
+            <span class="caption">${control.category}</span>
           </td>
           <td><span class="pill ${raw(control.status)}">${statusWord(control.status)}</span></td>
           <td>
-            ${control.answerLabel ?? html`<span style="color:var(--muted)">--</span>`}
-            ${control.note ? html`<br /><span style="color:var(--muted);font-size:12px">${control.note}</span>` : ''}
+            ${control.answerLabel ?? html`<span class="muted">--</span>`}
+            ${control.note ? html`<br /><span class="caption">${control.note}</span>` : ''}
           </td>
-          <td style="color:var(--muted);font-size:12px">
+          <td class="caption">
             ${control.recordedAt
               ? html`${formatDate(control.recordedAt)}<br />${control.recordedBy} (${control.source})`
               : 'Not recorded'}

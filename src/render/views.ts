@@ -47,7 +47,7 @@ export function consolePage(input: {
       account. <a href="/audit">Audit log</a> · <a href="/users">People</a>
     </p>
 
-    <div class="grid" style="margin-bottom:18px">
+    <div class="grid mb-2xl">
       <div class="stat"><div class="n">${summaries.length}</div><div class="k">Clients</div></div>
       <div class="stat"><div class="n">${averageScore ?? '—'}</div><div class="k">Average readiness</div></div>
       <div class="stat"><div class="n">${notReady}</div><div class="k">Not ready</div></div>
@@ -55,14 +55,14 @@ export function consolePage(input: {
     </div>
 
     ${summaries.length === 0
-      ? html`<div class="card"><p class="muted" style="margin:0">
+      ? html`<div class="card"><p class="muted m0">
           No clients yet.${canCreate ? ' Add your first one below — it takes about a minute.' : ''}
         </p></div>`
       : html`<div class="card">
-          <table>
+          <table class="t-console">
             <thead><tr>
-              <th style="width:26%">Client</th><th style="width:9%">Score</th><th style="width:16%">Status</th>
-              <th style="width:19%">Assessed against</th><th style="width:12%">Answered</th><th>Biggest gap</th>
+              <th>Client</th><th>Score</th><th>Status</th>
+              <th>Assessed against</th><th>Answered</th><th>Biggest gap</th>
             </tr></thead>
             <tbody>
               ${summaries.map(
@@ -87,7 +87,7 @@ export function consolePage(input: {
           <h2>Add a client</h2>
           <form method="post" action="/clients" class="card">
             ${csrfField(ctx)}
-            <p class="hint" style="margin-top:0">
+            <p class="hint mt0">
               Name and one profile is enough to start — everything else can wait. You land straight
               on the control form, so a new client goes from nothing to a scored evidence pack in a
               single sitting.
@@ -96,22 +96,22 @@ export function consolePage(input: {
               <div><label for="name">Company name</label><input type="text" id="name" name="name" required autofocus></div>
               <div><label for="industry">Industry <span class="muted">(optional)</span></label><input type="text" id="industry" name="industry"></div>
             </div>
-            <div class="row" style="margin-top:12px">
+            <div class="row mt-sm">
               <div><label for="employeeCount">Staff <span class="muted">(optional)</span></label><input type="number" id="employeeCount" name="employeeCount" min="0"></div>
               <div><label for="primaryContact">Main contact <span class="muted">(optional)</span></label><input type="text" id="primaryContact" name="primaryContact"></div>
             </div>
-            <div style="margin-top:14px">
+            <div class="mt-md">
               <label>Assess against</label>
-              <div class="hint" style="margin-bottom:6px">Pick at least one. You can change this later.</div>
+              <div class="hint mb-xs">Pick at least one. You can change this later.</div>
               ${profiles.map(
-                (profile, index) => html`<label style="font-weight:400;display:block;margin-bottom:4px">
+                (profile, index) => html`<label class="checkbox-row">
                   <input type="checkbox" name="profileKey" value="${profile.key}"
                     ${raw(index === 0 ? 'checked' : '')}>
                   ${profile.name} <span class="muted small">— ${profile.publisher}</span>
                 </label>`,
               )}
             </div>
-            <div style="margin-top:14px"><button type="submit">Add client and start recording</button></div>
+            <div class="mt-md"><button type="submit">Add client and start recording</button></div>
           </form>
         `
       : ''}
@@ -165,28 +165,28 @@ export function clientPage(input: {
 
     ${assessment
       ? html`
-          <div class="grid" style="margin-bottom:14px">
+          <div class="grid mb-lg">
             <div class="stat"><div class="n">${assessment.score}</div><div class="k">Readiness score</div></div>
             <div class="stat"><div class="n">${assessment.stateHeadline}</div><div class="k">${assessment.profile.name}</div></div>
             <div class="stat"><div class="n">${assessment.counts.pass}/${assessment.controls.length}</div><div class="k">Controls in place</div></div>
             <div class="stat"><div class="n">${assessment.coverage.answered}/${assessment.coverage.total}</div><div class="k">Answered</div></div>
           </div>
-          <div class="card tight"><p class="small" style="margin:0">${assessment.stateExplanation}</p></div>
+          <div class="card tight"><p class="small m0">${assessment.stateExplanation}</p></div>
           ${permissions.generate
-            ? html`<form method="post" action="/clients/${client.id}/packs" style="margin:14px 0 0">
+            ? html`<form method="post" action="/clients/${client.id}/packs" class="block-gap">
             ${csrfField(ctx)}
             <input type="hidden" name="profileKey" value="${assessment.profile.key}">
             <div class="row">
-              <div style="flex:0 0 240px">
+              <div class="field-narrow">
                 <label for="generatedBy">Generate pack as</label>
                 <input type="text" id="generatedBy" name="generatedBy" value="MSP technician" required>
               </div>
-              <div style="flex:0 0 auto"><button type="submit">Generate evidence pack</button></div>
+              <div class="field-auto"><button type="submit">Generate evidence pack</button></div>
             </div>
           </form>`
             : ''}
         `
-      : html`<div class="card"><p class="muted" style="margin:0">
+      : html`<div class="card"><p class="muted m0">
           Assign a requirement profile below to see this client's readiness score.
         </p></div>`}
 
@@ -194,25 +194,25 @@ export function clientPage(input: {
     ${permissions.configure
       ? html`<form method="post" action="/clients/${client.id}/profiles" class="card">
       ${csrfField(ctx)}
-      <p class="hint" style="margin-top:0">
+      <p class="hint mt0">
         Which obligations does this client have to satisfy? Scoring and the evidence pack are always
         relative to a profile, so at least one is needed. Profiles are data --
         add your own in <code>config/profiles/</code>.
       </p>
       ${profiles.map(
-        (profile) => html`<div style="margin-bottom:10px">
-          <label style="font-weight:600">
+        (profile) => html`<div class="mb-sm">
+          <label class="semibold">
             <input type="checkbox" name="profileKey" value="${profile.key}"
               ${raw(assignedProfiles.includes(profile.key) ? 'checked' : '')}>
             ${profile.name}
-            <span class="muted small" style="font-weight:400">— ${profile.publisher} ${profile.version}</span>
+            <span class="muted small normal-weight">— ${profile.publisher} ${profile.version}</span>
           </label>
-          <div class="hint" style="margin-left:22px">${profile.description}</div>
+          <div class="hint indent">${profile.description}</div>
         </div>`,
       )}
       <button type="submit">Save profiles</button>
     </form>`
-      : html`<div class="card"><p class="small muted" style="margin:0">
+      : html`<div class="card"><p class="small muted m0">
           Assessed against ${assignedProfiles.length > 0 ? assignedProfiles.join(', ') : 'no profile yet'}.
           Your role cannot change this.
         </p></div>`}
@@ -221,30 +221,30 @@ export function clientPage(input: {
     ${permissions.evidenceWrite
       ? html`<form method="post" action="/clients/${client.id}/evidence" class="card">
       ${csrfField(ctx)}
-      <div class="row" style="margin-bottom:6px">
-        <div style="flex:0 0 260px">
+      <div class="row mb-xs">
+        <div class="field-mid">
           <label for="recordedBy">Recorded by</label>
           <input type="text" id="recordedBy" name="recordedBy" value="MSP technician" required>
           <div class="hint">Stamped onto every record you save below.</div>
         </div>
       </div>
       ${controls.map((control) => controlField(control, current.get(control.key), assessment))}
-      <div style="margin-top:16px"><button type="submit">Save evidence</button>
-        <span class="hint" style="display:inline-block;margin-left:10px">
+      <div class="mt-lg"><button type="submit">Save evidence</button>
+        <span class="hint inline-note">
           Only changed answers are written. Nothing is ever overwritten.
         </span>
       </div>
     </form>`
       : html`<div class="card">
           ${controls.map((control) => readOnlyControl(control, current.get(control.key)))}
-          <p class="hint" style="margin:12px 0 0">Your role is read-only, so these cannot be changed.</p>
+          <p class="hint tight-gap">Your role is read-only, so these cannot be changed.</p>
         </div>`}
 
     ${input.portalSection ?? ''}
 
     <h2>Evidence packs</h2>
     ${packs.length === 0
-      ? html`<div class="card"><p class="muted" style="margin:0">None generated yet.</p></div>`
+      ? html`<div class="card"><p class="muted m0">None generated yet.</p></div>`
       : html`<div class="card"><table>
           <thead><tr><th>Generated</th><th>Standard</th><th>Score</th><th>Verdict</th><th>By</th><th></th></tr></thead>
           <tbody>
@@ -263,7 +263,7 @@ export function clientPage(input: {
 
     <h2>Evidence history</h2>
     <div class="card tight">
-      <p class="small" style="margin:0">
+      <p class="small m0">
         Every answer ever recorded for this client is kept, dated and attributed.
         <a href="/clients/${client.id}/history">View the full audit trail</a>.
       </p>
@@ -285,7 +285,7 @@ function controlField(
       <h3>${control.title}</h3>
       ${statusPill(row?.status ?? 'unknown')}
       ${assessed ? requirementPill(assessed.requirement) : ''}
-      <span class="muted small" style="margin-left:auto">${control.category}</span>
+      <span class="muted small push-right">${control.category}</span>
     </div>
     <div class="hint">${control.question}${control.help ? html` ${control.help}` : ''}</div>
     <div class="row">
@@ -296,7 +296,7 @@ function controlField(
       </div>
     </div>
     ${row
-      ? html`<div class="hint" style="margin-top:6px">
+      ? html`<div class="hint mt-xs">
           Last recorded ${formatDateTime(row.recorded_at)} by ${row.recorded_by} (${row.source}) ·
           <a href="/clients/${row.client_id}/history?control=${control.key}">history</a>
         </div>`
@@ -309,7 +309,7 @@ function readOnlyControl(control: Control, row: EvidenceRow | undefined): SafeHt
     <div class="control-head">
       <h3>${control.title}</h3>
       ${statusPill(row?.status ?? 'unknown')}
-      <span class="muted small" style="margin-left:auto">${control.category}</span>
+      <span class="muted small push-right">${control.category}</span>
     </div>
     <div class="hint">
       ${row ? html`${row.answer_label} — recorded ${formatDateTime(row.recorded_at)} by ${row.recorded_by}` : 'Not answered'}
@@ -361,10 +361,10 @@ export function historyPage(input: {
     </p>
 
     ${records.length === 0
-      ? html`<div class="card"><p class="muted" style="margin:0">Nothing recorded yet.</p></div>`
-      : html`<div class="card"><table>
-          <thead><tr><th style="width:16%">When</th><th style="width:22%">Control</th><th style="width:10%">Status</th>
-            <th style="width:26%">Answer</th><th style="width:26%">Recorded by</th></tr></thead>
+      ? html`<div class="card"><p class="muted m0">Nothing recorded yet.</p></div>`
+      : html`<div class="card"><table class="t-history">
+          <thead><tr><th>When</th><th>Control</th><th>Status</th>
+            <th>Answer</th><th>Recorded by</th></tr></thead>
           <tbody>
             ${records.map(
               (record) => html`<tr>
@@ -377,7 +377,7 @@ export function historyPage(input: {
                 </td>
                 <td class="small muted">
                   ${record.recorded_by} · ${record.source}<br />
-                  <span style="font-size:11px">definition ${record.control_version}</span>
+                  <span class="tiny">definition ${record.control_version}</span>
                 </td>
               </tr>`,
             )}

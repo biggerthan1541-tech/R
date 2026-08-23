@@ -74,6 +74,50 @@ button, .btn {
 .control:first-of-type { border-top: 0; padding-top: 4px; }
 .control-head { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
 nav.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+
+/* Utility classes exist so the markup needs no inline style attributes: a CSP
+   nonce authorises a stylesheet element but NOT a style attribute, so an inline
+   style here would be silently dropped by the browser. See test/csp.test.ts. */
+.m0 { margin: 0; }
+.mt0 { margin-top: 0; }
+.mt-xs { margin-top: 6px; }
+.mt-sm { margin-top: 12px; }
+.mt-md { margin-top: 14px; }
+.mt-lg { margin-top: 16px; }
+.mb-2 { margin-bottom: 2px; }
+.mb-xs { margin-bottom: 6px; }
+.mb-sm { margin-bottom: 10px; }
+.mb-md { margin-bottom: 12px; }
+.mb-lg { margin-bottom: 14px; }
+.mb-xl { margin-bottom: 16px; }
+.mb-2xl { margin-bottom: 18px; }
+.block-gap { margin: 14px 0 0; }
+.tight-gap { margin: 12px 0 0; }
+.indent { margin-left: 22px; }
+.push-right { margin-left: auto; }
+.tiny { font-size: 11px; }
+.semibold { font-weight: 600; }
+.normal-weight { font-weight: 400; }
+.checkbox-row { font-weight: 400; display: block; margin-bottom: 4px; }
+.inline-note { display: inline-block; margin-left: 10px; }
+.nowrap { white-space: nowrap; }
+.break-word { word-break: break-word; }
+.break-all { word-break: break-all; }
+.field-narrow { flex: 0 0 240px; }
+.field-mid { flex: 0 0 260px; }
+.field-auto { flex: 0 0 auto; }
+.signin { max-width: 420px; margin: 56px auto 0; }
+.role-select { width: auto; padding: 4px 8px; }
+
+/* Table column proportions, set here so the markup needs no width attribute. */
+.t-console th:nth-child(1) { width: 26%; } .t-console th:nth-child(2) { width: 9%; }
+.t-console th:nth-child(3) { width: 16%; } .t-console th:nth-child(4) { width: 19%; }
+.t-console th:nth-child(5) { width: 12%; }
+.t-history th:nth-child(1) { width: 16%; } .t-history th:nth-child(2) { width: 22%; }
+.t-history th:nth-child(3) { width: 10%; } .t-history th:nth-child(4) { width: 26%; }
+.t-history th:nth-child(5) { width: 26%; }
+.t-audit th:nth-child(1) { width: 15%; } .t-audit th:nth-child(2) { width: 22%; }
+.t-audit th:nth-child(3) { width: 18%; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 12px; }
 .tab { font-size: 13px; font-weight: 600; padding: 6px 13px; border-radius: 999px; text-decoration: none;
        border: 1px solid var(--line); background: var(--card); color: var(--muted); }

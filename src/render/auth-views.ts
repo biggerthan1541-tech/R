@@ -8,8 +8,8 @@ export function loginPage(
   options: { error?: string; email?: string; notice?: string } = {},
 ): string {
   const body = html`
-    <div style="max-width:420px;margin:56px auto 0">
-      <h1 style="margin-bottom:2px">Sign in</h1>
+    <div class="signin">
+      <h1 class="mb-2">Sign in</h1>
       <p class="lede">Readiness — compliance and cyber-insurance readiness for your clients.</p>
 
       ${options.notice ? html`<div class="ok">${options.notice}</div>` : ''}
@@ -17,12 +17,12 @@ export function loginPage(
 
       <form method="post" action="/login" class="card">
         ${csrfField(ctx)}
-        <div style="margin-bottom:12px">
+        <div class="mb-md">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" value="${options.email ?? ''}"
             autocomplete="username" required autofocus>
         </div>
-        <div style="margin-bottom:16px">
+        <div class="mb-xl">
           <label for="password">Password</label>
           <input type="password" id="password" name="password" autocomplete="current-password" required>
         </div>
@@ -62,7 +62,7 @@ export function usersPage(input: {
                 ${canManage
                   ? html`<form method="post" action="/users/${user.id}/role" class="inline-form">
                       ${csrfField(ctx)}
-                      <select name="role" style="width:auto;padding:4px 8px">
+                      <select name="role" class="role-select">
                         ${roles.map(
                           (role) => html`<option value="${role.key}"
                             ${raw(role.key === user.role ? 'selected' : '')}>${role.label}</option>`,
@@ -100,7 +100,7 @@ export function usersPage(input: {
               <div><label for="name">Name</label><input type="text" id="name" name="name" required></div>
               <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
             </div>
-            <div class="row" style="margin-top:12px">
+            <div class="row mt-sm">
               <div>
                 <label for="role">Role</label>
                 <select id="role" name="role">
@@ -113,7 +113,7 @@ export function usersPage(input: {
                   placeholder="At least 12 characters">
               </div>
             </div>
-            <div style="margin-top:14px"><button type="submit">Add user</button></div>
+            <div class="mt-md"><button type="submit">Add user</button></div>
           </form>
         `
       : ''}
@@ -139,15 +139,15 @@ export function auditPage(input: { ctx: ViewContext; entries: AuditRow[]; chainO
     </div>
 
     <div class="card">
-      <table>
-        <thead><tr><th style="width:15%">When</th><th style="width:22%">Who</th><th style="width:18%">Action</th><th>Detail</th></tr></thead>
+      <table class="t-audit">
+        <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
         <tbody>
           ${entries.map(
             (entry) => html`<tr>
-              <td class="small" style="white-space:nowrap">${formatDateTime(entry.occurred_at)}</td>
-              <td class="small" style="word-break:break-word">${entry.actor_label}</td>
+              <td class="small nowrap">${formatDateTime(entry.occurred_at)}</td>
+              <td class="small break-word">${entry.actor_label}</td>
               <td class="small"><code>${entry.action}</code></td>
-              <td class="small muted" style="word-break:break-word">
+              <td class="small muted break-word">
                 ${entry.subject_type ? html`${entry.subject_type} ${entry.subject_id} ` : ''}
                 ${describeDetail(entry.detail)}
               </td>
@@ -183,12 +183,12 @@ export function portalLinksSection(
       ? html`<div class="ok">
           <strong>Share this link with your client.</strong> It is read-only, shows only their own
           evidence pack, and expires ${formatDateTime(options.issued.expiresAt)}. It is shown once.
-          <div style="margin-top:8px"><code style="word-break:break-all">${options.issued.url}</code></div>
+          <div class="mt-xs"><code class="break-all">${options.issued.url}</code></div>
         </div>`
       : ''}
 
     ${links.length === 0
-      ? html`<div class="card"><p class="muted" style="margin:0">No portal links issued yet.</p></div>`
+      ? html`<div class="card"><p class="muted m0">No portal links issued yet.</p></div>`
       : html`<div class="card"><table>
           <thead><tr><th>Created</th><th>Expires</th><th>Views</th><th>Status</th>${options.canRevoke ? html`<th></th>` : ''}</tr></thead>
           <tbody>
