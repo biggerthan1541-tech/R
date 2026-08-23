@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Compliance and cyber-insurance readiness platform for MSPs",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
@@ -20,12 +22,12 @@
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
     "better-sqlite3": "^12.4.1",
-    "fastify": "^5.6.1"
+    "fastify": "^5.6.1",
+    "tsx": "^4.20.6"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.3",
-    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
 }

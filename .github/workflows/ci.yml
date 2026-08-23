@@ -64,9 +64,51 @@ jobs:
             }).catch((e) => { console.error(e); process.exit(1); });
           "
 
+      - name: Prove tsx is in the image rather than fetched at start
+        # `npx tsx` would silently download from npm on every boot, so the app
+        # would fail to start on a host with restricted egress -- or during a
+        # demo, if npm happened to be having a bad day.
+        run: |
+          docker exec readiness-ci test -x node_modules/.bin/tsx
+          docker exec readiness-ci node -e "
+            const v = require('/app/node_modules/tsx/package.json').version;
+            console.log('tsx bundled in the image:', v);
+          "
+
       - name: Stop the container
         if: always()
         run: docker rm -f readiness-ci || true
+
+      - name: Prove client data survives a redeploy
+        # The claim that matters most: replacing the container must not touch the
+        # database. This uses the same named-volume mechanism the server does --
+        # write data with one container, destroy it entirely, start a different
+        # one on the same volume, and read the data back.
+        run: |
+          docker volume create readiness-persist >/dev/null
+
+          echo "--- deployment 1: create a tenant, a client and its evidence ---"
+          docker run --rm -v readiness-persist:/data readiness:ci \
+            node_modules/.bin/tsx src/cli.ts demo | tail -4
+
+          echo "--- container destroyed; starting a different one on the same volume ---"
+          docker run --rm -v readiness-persist:/data readiness:ci node -e "
+            import('/app/src/db/connection.ts').then(async (m) => {
+              const db = m.openDatabase();
+              const clients = db.prepare('SELECT name FROM clients').all();
+              const evidence = db.prepare('SELECT COUNT(*) AS n FROM evidence_records').get();
+              console.log('clients after redeploy:', JSON.stringify(clients));
+              console.log('evidence records after redeploy:', evidence.n);
+              if (clients.length === 0) { console.error('DATA LOST ACROSS REDEPLOY'); process.exit(1); }
+              if (evidence.n === 0) { console.error('EVIDENCE LOST ACROSS REDEPLOY'); process.exit(1); }
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+          echo "--- and a backup taken from one container restores in another ---"
+          docker run --rm -v readiness-persist:/data readiness:ci \
+            node_modules/.bin/tsx src/cli.ts backup | head -2
+
+          docker volume rm readiness-persist >/dev/null
 
       - name: Log in to the registry
         # Pull requests from forks get no token, and publishing an unreviewed

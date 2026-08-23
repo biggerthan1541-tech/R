@@ -28,6 +28,9 @@ WORKDIR /app
 # Dependencies first: this layer is cached until package.json changes, so an
 # ordinary code change redeploys without recompiling better-sqlite3.
 COPY package.json package-lock.json ./
+# tsx is a runtime dependency here, not a build tool: there is no build step, so
+# the server runs TypeScript directly. --omit=dev leaves out the typechecker and
+# the type packages, which the running app does not need.
 RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY . .
@@ -47,4 +50,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["npx", "tsx", "src/server.ts"]
+# Resolved from node_modules, never fetched at start: a container that reaches
+# the network to boot is a container that will not boot when it matters.
+CMD ["node_modules/.bin/tsx", "src/server.ts"]
