@@ -7,9 +7,10 @@ each client a dated evidence pack.
 The evidence store is the product. Every answer about every control is appended, never
 overwritten, so a client's posture has a queryable history rather than a current value.
 
-**Status: Phase 2 complete.** Evidence core and single-client flow (Phase 1), plus real
-authentication, data-driven roles, a multi-client roll-up console, a read-only client portal, and
-a tamper-evident operator audit log (Phase 2).
+**Status: the operator path is complete end to end.** A technician can sign up, add a client,
+record their controls, see what blocks readiness across every standard the client is held to,
+hand over a branded evidence pack as a link or a PDF, and come back later to a record of what
+moved. Everything below is reachable from the browser — no CLI, no JSON editing.
 
 ---
 
@@ -31,20 +32,22 @@ Four runtime dependencies in total. Nothing is generated, bundled, or transpiled
 
 ```bash
 npm install
-npm run setup    # writes .env with a generated SESSION_SECRET
-npm run demo     # seeds config + a tenant + three users + a worked example client
-npm start        # http://localhost:3000
+npm run setup    # one-time: writes .env with a generated SESSION_SECRET
+npm start        # http://localhost:3000 -> "Set up your MSP"
 ```
 
-`npm run demo` prints sign-in credentials for three accounts — an owner, an operator and a
-read-only auditor — and a link to a generated evidence pack. **The passwords are shown once.**
+That is the whole install. Control definitions and requirement profiles load from `config/` on
+first start, so the database needs no seeding: open the app, create your practice, and begin.
+
+`npm run demo` still exists for a worked example — it seeds a tenant, three users at different
+roles, and a client with history — but nothing in the product depends on it.
 
 Other commands:
 
 ```bash
 npm run seed     # sync config/ into the database, provision the tenant and users
 npm run dev      # same as start, with reload on change
-npm test         # 85 tests
+npm test         # 121 tests
 npm run typecheck
 npm run reset    # delete the database file
 ```
@@ -54,26 +57,54 @@ tells you to run `npm run setup`.
 
 ---
 
-## Verifying Phase 2
+## The operator path
+
+What a technician actually does, in order. `test/operator-journey.test.ts` walks exactly this,
+over HTTP, against an empty database.
+
+| # | The tech does this | And gets |
+|---|---|---|
+| 1 | Opens the app, **sets up the practice** (`/signup`) | Signed in, on a console with no clients |
+| 2 | **Adds a client** — name plus the standards they are held to, one submit | Landed on the control form |
+| 3 | **Records each control** from a dropdown | Every answer appended to the evidence log, dated and attributed |
+| 4 | Reads **what is blocking "ready"** | Each standard scored; one ordered list of gaps, each with the business consequence and the fix, tagged with which standards demand it |
+| 5 | **Generates an evidence pack** | A dated, immutable artifact |
+| 6 | **Shares it** | A signed link that expires in 30 days, opens with no account, and can be withdrawn |
+| 7 | **Downloads the PDF** | `harbour-dental-group-readiness-2026-08-23.pdf`, ready to attach to an application |
+| 8 | Comes back later, updates controls, **regenerates** | A pack that opens with *what has changed since* — improvements, and anything that slipped |
+
+A control that three standards all demand is **one job**, shown once and tagged with all three —
+not three separate findings for the same fix.
+
+### Evidence packs as PDFs
+
+`GET /packs/:id.pdf` (operator) and `GET /portal/:token/pdf` (the end client) render the pack
+through a headless Chrome or Chromium already on the machine, using the browser's own print
+pipeline. No PDF library, and no second layout to keep in sync with the web page.
+
+If no browser is found the download returns a clear 503 explaining how to fix it, and the pack
+remains available as a web page that any browser can print. Set `CHROME_PATH` if yours is
+somewhere unusual.
+
+### Signing up
+
+Signup is **open by default** — anyone who can reach the app can create a practice. Set
+`SIGNUP_INVITE_CODE` to require a code. There is no invitation email; an owner adds colleagues
+under *People* with a temporary password.
+
+---
+
+## Verifying multi-tenant isolation
 
 > *"As one MSP I manage several clients from a single login with clean isolation."*
 
-1. `npm run setup && npm run demo && npm start`, then open <http://localhost:3000>. You are
-   redirected to sign in — there is no unauthenticated surface.
-2. **Sign in as the owner** using the credentials `npm run demo` printed. You land on the
-   roll-up console: every client, worst first, with score, verdict, coverage and biggest gap.
-3. **Onboard a client in one submit** — the *Add a client* form takes the name and the
-   requirement profiles together, then drops you straight on the control form. Name plus one
-   profile is the minimum; everything else is optional.
-4. **Drill in and back out** — open any client, record evidence, generate a pack, return to the
-   console and watch the score move.
-5. **Check role enforcement.** Sign out, sign in as `auditor@…` (read-only). The *Add a client*
-   form, the *Save evidence* button and the profile controls are gone, and the client page says
-   the role is read-only. Posting to those routes anyway returns 403, not a silent no-op.
-6. **Check the audit log** at `/audit`. Every sign-in, client creation, evidence write and pack
-   generation is there, attributed and dated, with the hash chain reported as verified.
-7. **Share a pack with a client.** On a client page, issue a portal link. Open it in a private
-   window — no login, no operator surface, just that one pack. Revoke it and reload: it is gone.
+1. Sign up a second practice at `/signup` in a private window.
+2. Its console is empty, and pasting the first practice's client, pack or portal URL returns 404.
+3. **Check role enforcement** with `npm run demo`, signing in as `auditor@…` (read-only): the
+   *Add a client* form, the *Save evidence* button and the profile controls are gone, and posting
+   to those routes anyway returns 403, not a silent no-op.
+4. **Check the audit log** at `/audit`: every sign-in, client creation, evidence write and pack
+   generation, attributed and dated, with the hash chain reported as verified.
 
 ### Verifying tenant isolation by hand
 

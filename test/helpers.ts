@@ -10,6 +10,7 @@ export const TEST_ENV: Env = {
   databaseFile: ':memory:',
   secureCookies: false,
   nodeEnv: 'test',
+  signupInviteCode: null,
 };
 
 export function testDb(): Db {

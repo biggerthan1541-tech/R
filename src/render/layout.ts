@@ -108,6 +108,17 @@ nav.crumbs { font-size: 13px; color: var(--muted); margin-bottom: 2px; }
 .field-auto { flex: 0 0 auto; }
 .signin { max-width: 420px; margin: 56px auto 0; }
 .role-select { width: auto; padding: 4px 8px; }
+.profile-stat { display: block; text-decoration: none; color: inherit; }
+.profile-stat:hover { border-color: var(--accent); }
+.profile-stat .n { font-size: 22px; }
+.blocker { border-left: 4px solid var(--line); }
+.blocker.blocking { border-left-color: var(--fail); }
+.fixbox { background: #f6f7f9; border-left: 3px solid var(--accent); padding: 9px 13px; }
+.fixbox strong { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+                 color: var(--accent); margin-bottom: 3px; }
+.delta-score.up { color: var(--pass); }
+.delta-score.down { color: var(--fail); }
+.delta-score.flat { color: var(--muted); }
 
 /* Table column proportions, set here so the markup needs no width attribute. */
 .t-console th:nth-child(1) { width: 26%; } .t-console th:nth-child(2) { width: 9%; }

@@ -28,9 +28,61 @@ export function loginPage(
         </div>
         <button type="submit">Sign in</button>
       </form>
+
+      <p class="small muted">No account yet? <a href="/signup">Set up your MSP</a>.</p>
     </div>
   `;
   return page('Sign in', ctx, body);
+}
+
+export function signupPage(
+  ctx: ViewContext,
+  options: { error?: string; values?: Record<string, string>; inviteRequired: boolean } = { inviteRequired: false },
+): string {
+  const v = options.values ?? {};
+  const body = html`
+    <div class="signin">
+      <h1 class="mb-2">Set up your MSP</h1>
+      <p class="lede">
+        Creates your practice and your owner account. Everything you record afterwards belongs to
+        this practice alone.
+      </p>
+
+      ${options.error ? html`<div class="err">${options.error}</div>` : ''}
+
+      <form method="post" action="/signup" class="card">
+        ${csrfField(ctx)}
+        <div class="mb-md">
+          <label for="mspName">Your company name</label>
+          <input type="text" id="mspName" name="mspName" value="${v.mspName ?? ''}" required autofocus>
+          <div class="hint">Shown on every evidence pack you hand a client.</div>
+        </div>
+        <div class="mb-md">
+          <label for="name">Your name</label>
+          <input type="text" id="name" name="name" value="${v.name ?? ''}" required>
+        </div>
+        <div class="mb-md">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" value="${v.email ?? ''}" autocomplete="username" required>
+        </div>
+        <div class="mb-md">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="new-password" minlength="12" required>
+          <div class="hint">At least 12 characters.</div>
+        </div>
+        ${options.inviteRequired
+          ? html`<div class="mb-md">
+              <label for="invite">Invite code</label>
+              <input type="text" id="invite" name="invite" required>
+            </div>`
+          : ''}
+        <button type="submit">Create practice</button>
+      </form>
+
+      <p class="small muted">Already set up? <a href="/login">Sign in</a>.</p>
+    </div>
+  `;
+  return page('Set up your MSP', ctx, body);
 }
 
 export function usersPage(input: {
@@ -175,20 +227,53 @@ export function portalLinksSection(
   ctx: ViewContext,
   clientId: string,
   links: PortalLinkRow[],
+  packs: { id: string; profile_key: string; score: number; generated_at: string }[],
   options: { canShare: boolean; canRevoke: boolean; issued?: { url: string; expiresAt: string } },
 ) {
   return html`
-    <h2>Client portal links</h2>
+    <h2>Share with the client</h2>
     ${options.issued
       ? html`<div class="ok">
-          <strong>Share this link with your client.</strong> It is read-only, shows only their own
-          evidence pack, and expires ${formatDateTime(options.issued.expiresAt)}. It is shown once.
+          <strong>Send your client this link.</strong> It is read-only, shows only their own
+          evidence pack, and expires ${formatDateTime(options.issued.expiresAt)}. It is shown once —
+          copy it now.
           <div class="mt-xs"><code class="break-all">${options.issued.url}</code></div>
         </div>`
       : ''}
 
+    ${options.canShare
+      ? packs.length === 0
+        ? html`<div class="card"><p class="m0 muted small">
+            Generate an evidence pack first, then you can share it as a link.
+          </p></div>`
+        : html`<form method="post" action="/clients/${clientId}/portal" class="card">
+            ${csrfField(ctx)}
+            <p class="hint mt0">
+              Creates a read-only link the client can open without an account. It shows exactly one
+              pack, expires in 30 days, and you can withdraw it at any time.
+            </p>
+            <div class="row">
+              <div>
+                <label for="packId">Which pack</label>
+                <select id="packId" name="packId">
+                  ${packs.map(
+                    (pack) => html`<option value="${pack.id}">
+                      ${formatDateTime(pack.generated_at)} — ${pack.profile_key} — scored ${pack.score}
+                    </option>`,
+                  )}
+                </select>
+              </div>
+              <div>
+                <label for="label">Label <span class="muted">(optional)</span></label>
+                <input type="text" id="label" name="label" placeholder="e.g. For Hiscox application">
+              </div>
+              <div class="field-auto"><button type="submit">Create link</button></div>
+            </div>
+          </form>`
+      : ''}
+
     ${links.length === 0
-      ? html`<div class="card"><p class="muted m0">No portal links issued yet.</p></div>`
+      ? html`<div class="card"><p class="m0 muted small">No links issued yet.</p></div>`
       : html`<div class="card"><table>
           <thead><tr><th>Created</th><th>Expires</th><th>Views</th><th>Status</th>${options.canRevoke ? html`<th></th>` : ''}</tr></thead>
           <tbody>
@@ -196,7 +281,10 @@ export function portalLinksSection(
               const expired = new Date(link.expires_at).getTime() <= Date.now();
               const state = link.revoked_at ? 'revoked' : expired ? 'expired' : 'active';
               return html`<tr>
-                <td class="small">${formatDateTime(link.created_at)}<br /><span class="muted">${link.created_by}</span></td>
+                <td class="small">
+                  ${formatDateTime(link.created_at)}<br />
+                  <span class="muted">${link.created_by}${link.label ? html` · ${link.label}` : ''}</span>
+                </td>
                 <td class="small">${formatDateTime(link.expires_at)}</td>
                 <td class="small">${link.view_count}${link.last_viewed_at ? html`<br /><span class="muted">last ${formatDateTime(link.last_viewed_at)}</span>` : ''}</td>
                 <td><span class="pill ${raw(state === 'active' ? 'pass' : 'unknown')}">${state}</span></td>
@@ -204,7 +292,7 @@ export function portalLinksSection(
                   ? html`<td>
                       ${state === 'active'
                         ? html`<form method="post" action="/clients/${clientId}/portal/${link.id}/revoke" class="inline-form">
-                            ${csrfField(ctx)}<button type="submit" class="linkish">Revoke</button>
+                            ${csrfField(ctx)}<button type="submit" class="linkish">Withdraw</button>
                           </form>`
                         : ''}
                     </td>`

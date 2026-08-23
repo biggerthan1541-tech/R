@@ -6,7 +6,13 @@ import { db as sharedDb, type Db } from './db/connection.ts';
 import { forTenant, lookupTenantForLogin, type NewEvidence, type TenantDb, type UserRow } from './db/tenant.ts';
 import { listControls, listProfiles, syncConfig } from './domain/config-loader.ts';
 import { evaluateControl } from './domain/evaluate.ts';
-import { assessClient } from './domain/readiness.ts';
+import {
+  assessAcrossProfiles,
+  assessClient,
+  diffAssessments,
+  type Assessment,
+  type AssessmentDelta,
+} from './domain/readiness.ts';
 import { can, roleLabel, roles } from './domain/roles.ts';
 import {
   endSession,
@@ -17,8 +23,8 @@ import {
   type Actor,
 } from './auth/session.ts';
 import { hashToken, isLive, issueToken, readToken } from './auth/tokens.ts';
-import { hashPassword, verifyPassword } from './auth/passwords.ts';
-import { getMspById, type Msp } from './db/msps.ts';
+import { assertUsable, hashPassword, verifyPassword } from './auth/passwords.ts';
+import { ensureMsp, getMspById, getMspBySlug, type Msp } from './db/msps.ts';
 import { BODY_LIMIT, registerSecurity } from './http/security.ts';
 import {
   clientIdParam,
@@ -33,7 +39,8 @@ import {
 } from './http/validation.ts';
 import { renderEvidencePack, type PackSnapshot } from './render/evidence-pack.ts';
 import type { ViewContext } from './render/layout.ts';
-import { auditPage, loginPage, portalLinksSection, usersPage } from './render/auth-views.ts';
+import { auditPage, loginPage, portalLinksSection, signupPage, usersPage } from './render/auth-views.ts';
+import { pdfFilename, PdfUnavailableError, renderPdf } from './render/pdf.ts';
 import {
   clientPage,
   consolePage,
@@ -43,6 +50,9 @@ import {
 } from './render/views.ts';
 
 const PORTAL_TTL_DAYS = 30;
+
+/** The role a practice's first user gets. Must exist in config/roles.json. */
+const OWNER_ROLE = 'owner';
 
 export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
   // Portal tokens travel as a route parameter and are ~110 characters signed,
@@ -89,6 +99,62 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
   });
 
   // -- authentication --------------------------------------------------------
+
+  app.get('/signup', async (request, reply) => {
+    if (request.actor) return reply.redirect('/');
+    reply.type('text/html').send(signupPage(view(request), { inviteRequired: Boolean(env.signupInviteCode) }));
+  });
+
+  app.post('/signup', async (request, reply) => {
+    const body = (request.body ?? {}) as Record<string, string>;
+    const values = {
+      mspName: (body.mspName ?? '').trim(),
+      name: (body.name ?? '').trim(),
+      email: (body.email ?? '').trim().toLowerCase(),
+    };
+    const inviteRequired = Boolean(env.signupInviteCode);
+    const fail = (message: string) =>
+      reply.code(400).type('text/html').send(signupPage(view(request), { error: message, values, inviteRequired }));
+
+    if (inviteRequired && body.invite !== env.signupInviteCode) {
+      return fail('That invite code is not valid.');
+    }
+
+    const mspName = requiredText(body, 'mspName', 'Company name', 160);
+    const name = requiredText(body, 'name', 'Your name', 120);
+    const email = requiredText(body, 'email', 'Email', 200).toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('That does not look like an email address.');
+    if (findLogin(db, email)) return fail('That email address is already in use.');
+
+    try {
+      assertUsable(body.password ?? '');
+    } catch (error) {
+      return fail((error as Error).message);
+    }
+
+    // Slug is derived, then de-duplicated, so two practices may share a name.
+    const mspId = ensureMsp(db, uniqueSlug(db, mspName), mspName);
+    const tenant = forTenant(db, mspId);
+    const user = tenant.createUser({
+      email,
+      name,
+      role: OWNER_ROLE,
+      passwordHash: await hashPassword(body.password!),
+      createdBy: null,
+    });
+
+    tenant.appendAudit({
+      actorUserId: user.id,
+      actorLabel: email,
+      action: 'msp.create',
+      subjectType: 'msp',
+      subjectId: mspId,
+      detail: { name: mspName },
+    });
+
+    startSession(db, { id: mspId, slug: '', name: mspName }, user, reply, cookieOptions);
+    reply.redirect('/?ok=' + encodeURIComponent(`${mspName} is set up. Add your first client below.`));
+  });
 
   app.get('/login', async (request, reply) => {
     if (request.actor) return reply.redirect('/');
@@ -202,13 +268,10 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
 
     const assignedProfiles = actor.tenant.listClientProfiles(id);
     const query = (request.query ?? {}) as Record<string, string>;
-    const activeProfile =
-      query.profile && assignedProfiles.includes(query.profile) ? query.profile : assignedProfiles[0];
-
     const ctx = view(request, actor);
     const canShare = can(actor.user.role, 'portal:share');
     const portalSection = can(actor.user.role, 'pack:read')
-      ? portalLinksSection(ctx, id, actor.tenant.listPortalLinks(id), {
+      ? portalLinksSection(ctx, id, actor.tenant.listPortalLinks(id), actor.tenant.listPacks(id), {
           canShare,
           canRevoke: can(actor.user.role, 'portal:revoke'),
           issued: query.portalUrl && query.portalExpires
@@ -225,7 +288,8 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
         current: actor.tenant.currentEvidence(id),
         profiles: listProfiles(db),
         assignedProfiles,
-        assessment: activeProfile ? assessClient(db, actor.tenant, id, activeProfile) : null,
+        portfolio: assessAcrossProfiles(db, actor.tenant, id, assignedProfiles),
+        delta: latestDelta(db, actor.tenant, id, assignedProfiles),
         packs: actor.tenant.listPacks(id),
         portalSection,
         permissions: {
@@ -363,7 +427,17 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
     const id = packIdParam(request.params);
     const pack = actor.tenant.getPack(id);
     if (!pack) throw new HttpError(404, 'No such evidence pack.');
-    reply.type('text/html').send(renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot, request.cspNonce));
+    reply.type('text/html').send(
+      renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot, request.cspNonce, `/packs/${id}.pdf`),
+    );
+  });
+
+  app.get('/packs/:id.pdf', async (request, reply) => {
+    const actor = requirePermission(request, 'pack:read');
+    const id = packIdParam({ id: (request.params as Record<string, string>).id });
+    const pack = actor.tenant.getPack(id);
+    if (!pack) throw new HttpError(404, 'No such evidence pack.');
+    await sendPdf(reply, JSON.parse(pack.snapshot) as PackSnapshot);
   });
 
   // -- read-only client portal ----------------------------------------------
@@ -413,26 +487,19 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
    * whole credential, it grants read access to exactly one pack, and it stops
    * working when it expires or is revoked.
    */
+  app.get('/portal/:token/pdf', async (request, reply) => {
+    const link = resolvePortalLink(db, (request.params as Record<string, string>).token ?? '', env.sessionSecret);
+    await sendPdf(reply, JSON.parse(link.pack.snapshot) as PackSnapshot);
+  });
+
   app.get('/portal/:token', async (request, reply) => {
     const raw = (request.params as Record<string, string>).token ?? '';
-    const parts = readToken(raw, env.sessionSecret);
-    if (!parts) throw new HttpError(404, 'This link is not valid.');
-
-    const msp = getMspById(db, parts.mspId);
-    if (!msp) throw new HttpError(404, 'This link is not valid.');
-
-    const tenant = forTenant(db, msp.id);
-    const link = tenant.getPortalLinkByHash(hashToken(raw));
-    if (!link) throw new HttpError(404, 'This link is not valid.');
-    if (!isLive(link)) {
-      throw new HttpError(410, 'This link has expired or been withdrawn. Ask your IT provider for a new one.');
-    }
-
-    const pack = tenant.getPack(link.pack_id);
-    if (!pack) throw new HttpError(404, 'This link is not valid.');
+    const { tenant, pack } = resolvePortalLink(db, raw, env.sessionSecret);
 
     tenant.recordPortalView(hashToken(raw));
-    reply.type('text/html').send(renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot, request.cspNonce));
+    reply.type('text/html').send(
+      renderEvidencePack(JSON.parse(pack.snapshot) as PackSnapshot, request.cspNonce, `/portal/${raw}/pdf`),
+    );
   });
 
   // -- people ----------------------------------------------------------------
@@ -523,6 +590,80 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
   });
 
   return app;
+}
+
+/**
+ * Resolves a portal token to its tenant and pack, or throws. Shared by the page
+ * and the PDF download so the two can never diverge on who may read what.
+ */
+function resolvePortalLink(db: Db, raw: string, secret: string) {
+  const parts = readToken(raw, secret);
+  if (!parts) throw new HttpError(404, 'This link is not valid.');
+
+  const msp = getMspById(db, parts.mspId);
+  if (!msp) throw new HttpError(404, 'This link is not valid.');
+
+  const tenant = forTenant(db, msp.id);
+  const link = tenant.getPortalLinkByHash(hashToken(raw));
+  if (!link) throw new HttpError(404, 'This link is not valid.');
+  if (!isLive(link)) {
+    throw new HttpError(410, 'This link has expired or been withdrawn. Ask your IT provider for a new one.');
+  }
+
+  const pack = tenant.getPack(link.pack_id);
+  if (!pack) throw new HttpError(404, 'This link is not valid.');
+  return { tenant, link, pack };
+}
+
+async function sendPdf(reply: FastifyReply, snapshot: PackSnapshot): Promise<void> {
+  // The PDF is rendered from the frozen snapshot, so it matches the web page
+  // byte for byte in content -- there is no second source of truth.
+  const html = renderEvidencePack(snapshot, 'pdf', null);
+  let pdf: Buffer;
+  try {
+    pdf = await renderPdf(html);
+  } catch (error) {
+    if (error instanceof PdfUnavailableError) throw new HttpError(503, error.message);
+    throw error;
+  }
+
+  reply
+    .header('content-type', 'application/pdf')
+    .header(
+      'content-disposition',
+      `attachment; filename="${pdfFilename(snapshot.client.name, snapshot.generatedAt)}"`,
+    )
+    .send(pdf);
+}
+
+/** Score movement since this client's most recent pack, if there is one. */
+function latestDelta(
+  db: Db,
+  tenant: TenantDb,
+  clientId: string,
+  profileKeys: string[],
+): AssessmentDelta | null {
+  const primary = profileKeys[0];
+  if (!primary) return null;
+
+  const previous = tenant.latestPackForProfile(clientId, primary);
+  if (!previous) return null;
+
+  const snapshot = JSON.parse(previous.snapshot) as PackSnapshot;
+  return diffAssessments(
+    snapshot.assessment,
+    assessClient(db, tenant, clientId, primary),
+    previous.generated_at,
+  );
+}
+
+/** `Northwind IT Services` -> `northwind-it-services`, made unique if taken. */
+function uniqueSlug(db: Db, name: string): string {
+  const base =
+    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'msp';
+  let candidate = base;
+  for (let suffix = 2; getMspBySlug(db, candidate); suffix += 1) candidate = `${base}-${suffix}`;
+  return candidate;
 }
 
 function audit(
@@ -623,6 +764,17 @@ export function generatePack(
   const generatedAt = new Date().toISOString();
   const packId = tenant.newPackId();
 
+  // Freeze the comparison too, so the pack shows what moved without depending
+  // on what happens to the evidence log afterwards.
+  const previous = tenant.latestPackForProfile(clientId, profileKey);
+  const delta = previous
+    ? diffAssessments(
+        (JSON.parse(previous.snapshot) as PackSnapshot).assessment,
+        assessment,
+        previous.generated_at,
+      )
+    : null;
+
   tenant.savePack({
     packId,
     clientId,
@@ -643,6 +795,7 @@ export function generatePack(
         primaryContact: client.primary_contact,
       },
       assessment,
+      delta,
     } satisfies PackSnapshot,
   });
 

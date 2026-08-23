@@ -1,5 +1,5 @@
 import type { ClientRow, EvidenceRow, PackRow } from '../db/tenant.ts';
-import type { Assessment } from '../domain/readiness.ts';
+import type { Assessment, AssessmentDelta, PortfolioAssessment } from '../domain/readiness.ts';
 import type { Control, ProfileDefinition } from '../domain/types.ts';
 import { formatDate, formatDateTime, html, raw, type SafeHtml } from './html.ts';
 import { csrfField, page, requirementPill, statusPill, type ViewContext } from './layout.ts';
@@ -131,14 +131,18 @@ export function clientPage(input: {
   current: Map<string, EvidenceRow>;
   profiles: ProfileDefinition[];
   assignedProfiles: string[];
-  assessment: Assessment | null;
+  portfolio: PortfolioAssessment;
+  delta: AssessmentDelta | null;
   packs: PackRow[];
   portalSection: SafeHtml | null;
   permissions: { evidenceWrite: boolean; configure: boolean; generate: boolean };
   flash: { ok?: string; err?: string };
 }): string {
-  const { ctx, client, controls, current, profiles, assignedProfiles, assessment, packs, flash } = input;
+  const { ctx, client, controls, current, profiles, assignedProfiles, portfolio, delta, packs, flash } = input;
   const { permissions } = input;
+  const assignedNames = assignedProfiles.map(
+    (key) => profiles.find((profile) => profile.key === key)?.name ?? key,
+  );
 
   const body = html`
     ${flash.err ? html`<div class="err">${flash.err}</div>` : ''}
@@ -149,55 +153,40 @@ export function clientPage(input: {
     <p class="lede">
       ${[client.industry, client.employee_count ? `${client.employee_count} staff` : null, client.primary_contact]
         .filter(Boolean)
-        .join(' · ') || 'No profile details recorded'}
+        .join(' · ') || 'No details recorded'}
     </p>
 
-    ${assignedProfiles.length > 1 && assessment
-      ? html`<div class="tabs">
-          ${assignedProfiles.map((key) => {
-            const profile = profiles.find((p) => p.key === key);
-            const active = key === assessment.profile.key;
-            return html`<a class="tab ${raw(active ? 'active' : '')}"
-              href="/clients/${client.id}?profile=${key}">${profile?.name ?? key}</a>`;
-          })}
-        </div>`
-      : ''}
+    ${readinessSection(ctx, client.id, portfolio, delta)}
 
-    ${assessment
-      ? html`
-          <div class="grid mb-lg">
-            <div class="stat"><div class="n">${assessment.score}</div><div class="k">Readiness score</div></div>
-            <div class="stat"><div class="n">${assessment.stateHeadline}</div><div class="k">${assessment.profile.name}</div></div>
-            <div class="stat"><div class="n">${assessment.counts.pass}/${assessment.controls.length}</div><div class="k">Controls in place</div></div>
-            <div class="stat"><div class="n">${assessment.coverage.answered}/${assessment.coverage.total}</div><div class="k">Answered</div></div>
-          </div>
-          <div class="card tight"><p class="small m0">${assessment.stateExplanation}</p></div>
-          ${permissions.generate
-            ? html`<form method="post" action="/clients/${client.id}/packs" class="block-gap">
+    ${permissions.generate && assignedProfiles.length > 0
+      ? html`<h2>Hand this to the client</h2>
+          <form method="post" action="/clients/${client.id}/packs" class="card">
             ${csrfField(ctx)}
-            <input type="hidden" name="profileKey" value="${assessment.profile.key}">
+            <p class="hint mt0">
+              Freezes today's position into a dated pack you can share as a link or attach to an
+              application as a PDF.
+            </p>
             <div class="row">
-              <div class="field-narrow">
-                <label for="generatedBy">Generate pack as</label>
-                <input type="text" id="generatedBy" name="generatedBy" value="MSP technician" required>
+              <div>
+                <label for="profileKey">Assessed against</label>
+                <select id="profileKey" name="profileKey">
+                  ${assignedProfiles.map(
+                    (key, index) => html`<option value="${key}">${assignedNames[index]}</option>`,
+                  )}
+                </select>
               </div>
               <div class="field-auto"><button type="submit">Generate evidence pack</button></div>
             </div>
           </form>`
-            : ''}
-        `
-      : html`<div class="card"><p class="muted m0">
-          Assign a requirement profile below to see this client's readiness score.
-        </p></div>`}
+      : ''}
 
     <h2>Requirement profiles</h2>
     ${permissions.configure
       ? html`<form method="post" action="/clients/${client.id}/profiles" class="card">
       ${csrfField(ctx)}
       <p class="hint mt0">
-        Which obligations does this client have to satisfy? Scoring and the evidence pack are always
-        relative to a profile, so at least one is needed. Profiles are data --
-        add your own in <code>config/profiles/</code>.
+        Which obligations does this client have to satisfy? Scoring is relative to these, so at
+        least one is needed. Profiles are data — add your own in <code>config/profiles/</code>.
       </p>
       ${profiles.map(
         (profile) => html`<div class="mb-sm">
@@ -213,7 +202,7 @@ export function clientPage(input: {
       <button type="submit">Save profiles</button>
     </form>`
       : html`<div class="card"><p class="small muted m0">
-          Assessed against ${assignedProfiles.length > 0 ? assignedProfiles.join(', ') : 'no profile yet'}.
+          Assessed against ${assignedNames.length > 0 ? assignedNames.join(', ') : 'no profile yet'}.
           Your role cannot change this.
         </p></div>`}
 
@@ -221,14 +210,7 @@ export function clientPage(input: {
     ${permissions.evidenceWrite
       ? html`<form method="post" action="/clients/${client.id}/evidence" class="card">
       ${csrfField(ctx)}
-      <div class="row mb-xs">
-        <div class="field-mid">
-          <label for="recordedBy">Recorded by</label>
-          <input type="text" id="recordedBy" name="recordedBy" value="MSP technician" required>
-          <div class="hint">Stamped onto every record you save below.</div>
-        </div>
-      </div>
-      ${controls.map((control) => controlField(control, current.get(control.key), assessment))}
+      ${controls.map((control) => controlField(control, current.get(control.key), portfolio))}
       <div class="mt-lg"><button type="submit">Save evidence</button>
         <span class="hint inline-note">
           Only changed answers are written. Nothing is ever overwritten.
@@ -275,16 +257,16 @@ export function clientPage(input: {
 function controlField(
   control: Control,
   row: EvidenceRow | undefined,
-  assessment: Assessment | null,
+  portfolio: PortfolioAssessment,
 ): SafeHtml {
   const currentValue = row ? (JSON.parse(row.answer_value) as unknown) : null;
-  const assessed = assessment?.controls.find((c) => c.controlKey === control.key);
+  const blocking = portfolio.blockers.some((blocker) => blocker.controlKey === control.key);
 
-  return html`<div class="control">
+  return html`<div class="control" id="control-${control.key}">
     <div class="control-head">
       <h3>${control.title}</h3>
       ${statusPill(row?.status ?? 'unknown')}
-      ${assessed ? requirementPill(assessed.requirement) : ''}
+      ${blocking ? requirementPill('mandatory') : ''}
       <span class="muted small push-right">${control.category}</span>
     </div>
     <div class="hint">${control.question}${control.help ? html` ${control.help}` : ''}</div>
@@ -390,4 +372,104 @@ export function historyPage(input: {
 export function errorPage(ctx: ViewContext, message: string): string {
   return page('Error', ctx, html`<h1>Something went wrong</h1><div class="err">${message}</div>
     <p><a href="/">Back to clients</a></p>`);
+}
+
+
+/**
+ * Everything the client is measured against, on one screen, plus the single
+ * ordered list of what to do about it. A control three standards all demand is
+ * one job for the tech -- so it is shown once, tagged with who wants it.
+ */
+export function readinessSection(
+  ctx: ViewContext,
+  clientId: string,
+  portfolio: PortfolioAssessment,
+  delta: AssessmentDelta | null,
+): SafeHtml {
+  if (portfolio.profiles.length === 0) {
+    return html`<div class="card"><p class="m0 muted">
+      Assign at least one requirement profile below to see where this client stands.
+    </p></div>`;
+  }
+
+  return html`
+    <div class="grid mb-lg">
+      ${portfolio.profiles.map(
+        (profile) => html`<a class="stat profile-stat" href="/clients/${clientId}?profile=${profile.key}">
+          <div class="n">${profile.score}</div>
+          <div class="k">${profile.name}</div>
+          <div class="mt-xs">${statePill(profile.state, profile.stateHeadline)}</div>
+        </a>`,
+      )}
+    </div>
+
+    ${delta ? changeSummary(delta) : ''}
+
+    ${portfolio.blockers.length === 0
+      ? html`<div class="ok">
+          <strong>Nothing is blocking readiness.</strong>
+          ${portfolio.improvements.length > 0
+            ? html` ${portfolio.improvements.length} item${portfolio.improvements.length === 1 ? '' : 's'}
+                would still improve the score.`
+            : ' Every control is fully in place.'}
+        </div>`
+      : html`<h2>What is blocking "ready"</h2>
+          <p class="lede">
+            ${portfolio.blockers.length} control${portfolio.blockers.length === 1 ? '' : 's'} that at least
+            one standard treats as non-negotiable ${portfolio.blockers.length === 1 ? 'is' : 'are'} not in
+            place. Fix these before anything else — the score does not compensate for them.
+          </p>
+          ${portfolio.blockers.map((blocker) => blockerCard(clientId, blocker, true))}`}
+
+    ${portfolio.improvements.length > 0
+      ? html`<h2>Worth fixing next</h2>
+          <p class="lede">Costs score and invites questions, but will not stop a policy on its own.</p>
+          ${portfolio.improvements.map((blocker) => blockerCard(clientId, blocker, false))}`
+      : ''}
+  `;
+}
+
+function blockerCard(clientId: string, blocker: PortfolioAssessment['blockers'][number], blocking: boolean): SafeHtml {
+  return html`<div class="card blocker ${raw(blocking ? 'blocking' : '')}">
+    <div class="control-head">
+      <h3>${blocker.title}</h3>
+      ${statusPill(blocker.status)}
+      <span class="muted small push-right">
+        ${blocker.answerLabel ? html`Now: ${blocker.answerLabel}` : 'Not answered'}
+      </span>
+    </div>
+    <div class="mb-xs">
+      ${blocker.requiredBy.length > 0
+        ? html`<span class="pill mandatory">Required by ${blocker.requiredBy.join(', ')}</span> `
+        : ''}
+      ${blocker.expectedBy.length > 0
+        ? html`<span class="pill recommended">Expected by ${blocker.expectedBy.join(', ')}</span>`
+        : ''}
+    </div>
+    <p class="small m0">${blocker.consequence}</p>
+    <div class="fixbox mt-sm">
+      <strong>What to do</strong>
+      <div class="small">${blocker.fix}</div>
+    </div>
+    <div class="hint mt-xs">
+      <a href="#control-${blocker.controlKey}">Update this control</a> ·
+      <a href="/clients/${clientId}/history?control=${blocker.controlKey}">history</a>
+    </div>
+  </div>`;
+}
+
+function changeSummary(delta: AssessmentDelta): SafeHtml {
+  const direction = delta.scoreDelta > 0 ? 'up' : delta.scoreDelta < 0 ? 'down' : 'flat';
+  const sign = delta.scoreDelta > 0 ? '+' : '';
+  return html`<div class="card tight">
+    <p class="m0 small">
+      <strong class="delta-score ${raw(direction)}">
+        ${delta.scoreDelta === 0 ? 'No score change' : html`Score ${sign}${delta.scoreDelta}`}
+      </strong>
+      since the last pack on ${formatDate(delta.since)}${delta.changes.length > 0
+        ? html` — ${delta.changes.length} control${delta.changes.length === 1 ? '' : 's'} moved:
+            ${delta.changes.slice(0, 4).map((change, index) => html`${index > 0 ? ', ' : ''}${change.title}`)}${delta.changes.length > 4 ? ' …' : ''}`
+        : ' — nothing has moved.'}
+    </p>
+  </div>`;
 }

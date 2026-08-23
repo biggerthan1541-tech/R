@@ -400,6 +400,17 @@ export class TenantDb {
     );
   }
 
+  /** Most recent pack for this client against this profile, snapshot included. */
+  latestPackForProfile(clientId: string, profileKey: string): PackRow | undefined {
+    return this.#get<PackRow>(
+      `SELECT * FROM evidence_packs
+        WHERE msp_id = @msp_id AND client_id = @client_id AND profile_key = @profile_key
+        ORDER BY generated_at DESC, id DESC
+        LIMIT 1`,
+      { client_id: clientId, profile_key: profileKey },
+    );
+  }
+
   listPacks(clientId: string): PackRow[] {
     return this.#all<PackRow>(
       `SELECT id, msp_id, client_id, profile_key, score, state, generated_by, generated_at, '' AS snapshot

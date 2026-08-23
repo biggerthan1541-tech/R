@@ -208,3 +208,177 @@ function listNames(controls: AssessedControl[]): string {
   if (names.length === 1) return names[0]!;
   return `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 }
+
+
+// ---------------------------------------------------------------------------
+// Across every profile a client is assessed against
+// ---------------------------------------------------------------------------
+
+export type ProfileScore = {
+  key: string;
+  name: string;
+  publisher: string;
+  score: number;
+  state: ReadinessState;
+  stateHeadline: string;
+  blockingCount: number;
+};
+
+/**
+ * One gap, seen across every profile at once. A control that three standards
+ * all demand is one job for the tech, not three -- and knowing all three want
+ * it is what makes it the right job to do first.
+ */
+export type Blocker = {
+  controlKey: string;
+  title: string;
+  status: StatusOrUnknown;
+  answerLabel: string | null;
+  consequence: string;
+  fix: string;
+  /** Profiles that treat this as non-negotiable and are not satisfied. */
+  requiredBy: string[];
+  /** Profiles that expect it but will not refuse over it. */
+  expectedBy: string[];
+  worstImpact: number;
+};
+
+export type PortfolioAssessment = {
+  profiles: ProfileScore[];
+  /** Mandatory somewhere and not in place. These are what stop "ready". */
+  blockers: Blocker[];
+  /** Everything else outstanding: costs score, blocks nothing. */
+  improvements: Blocker[];
+  readyEverywhere: boolean;
+};
+
+export function assessAcrossProfiles(
+  db: Db,
+  tenant: TenantDb,
+  clientId: string,
+  profileKeys: string[],
+): PortfolioAssessment {
+  const assessments = profileKeys.map((key) => ({ key, assessment: assessClient(db, tenant, clientId, key) }));
+
+  const profiles: ProfileScore[] = assessments.map(({ key, assessment }) => ({
+    key,
+    name: assessment.profile.name,
+    publisher: assessment.profile.publisher,
+    score: assessment.score,
+    state: assessment.state,
+    stateHeadline: assessment.stateHeadline,
+    blockingCount: assessment.gaps.filter(
+      (gap) => gap.requirement === 'mandatory' && gap.status !== 'partial',
+    ).length,
+  }));
+
+  const merged = new Map<string, Blocker>();
+  for (const { assessment } of assessments) {
+    for (const gap of assessment.gaps) {
+      const existing = merged.get(gap.controlKey) ?? {
+        controlKey: gap.controlKey,
+        title: gap.title,
+        status: gap.status,
+        answerLabel: gap.answerLabel,
+        consequence: gap.gapExplanation ?? '',
+        fix: gap.remediation ?? '',
+        requiredBy: [],
+        expectedBy: [],
+        worstImpact: 0,
+      };
+
+      if (gap.requirement === 'mandatory') existing.requiredBy.push(assessment.profile.name);
+      else existing.expectedBy.push(assessment.profile.name);
+      existing.worstImpact = Math.max(existing.worstImpact, gap.impact);
+      merged.set(gap.controlKey, existing);
+    }
+  }
+
+  const all = [...merged.values()].sort(
+    (a, b) => b.requiredBy.length - a.requiredBy.length || b.worstImpact - a.worstImpact,
+  );
+
+  return {
+    profiles,
+    blockers: all.filter((gap) => gap.requiredBy.length > 0),
+    improvements: all.filter((gap) => gap.requiredBy.length === 0),
+    readyEverywhere: profiles.length > 0 && profiles.every((profile) => profile.state === 'ready'),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// What changed since last time
+// ---------------------------------------------------------------------------
+
+export type ChangeDirection = 'improved' | 'regressed' | 'answered' | 'updated';
+
+export type ControlChange = {
+  controlKey: string;
+  title: string;
+  direction: ChangeDirection;
+  from: StatusOrUnknown;
+  to: StatusOrUnknown;
+  fromLabel: string | null;
+  toLabel: string | null;
+};
+
+export type AssessmentDelta = {
+  since: string;
+  previousScore: number;
+  scoreDelta: number;
+  changes: ControlChange[];
+};
+
+/** Ordering for "did this get better or worse", where unanswered is its own floor. */
+const PROGRESS: Record<StatusOrUnknown, number> = { unknown: 0, fail: 1, partial: 2, pass: 3 };
+
+/**
+ * Compares a fresh assessment against the one frozen into the previous pack.
+ * This is what makes the pack a running record rather than a snapshot nobody
+ * can compare: an underwriter asking "what have you actually done since March"
+ * gets an answer.
+ */
+export function diffAssessments(
+  previous: Assessment,
+  current: Assessment,
+  since: string,
+): AssessmentDelta {
+  const before = new Map(previous.controls.map((control) => [control.controlKey, control]));
+  const changes: ControlChange[] = [];
+
+  for (const control of current.controls) {
+    const was = before.get(control.controlKey);
+    if (!was) continue;
+    if (was.status === control.status && was.answerLabel === control.answerLabel) continue;
+
+    const direction: ChangeDirection =
+      was.status === 'unknown' && control.status !== 'unknown'
+        ? 'answered'
+        : PROGRESS[control.status] > PROGRESS[was.status]
+          ? 'improved'
+          : PROGRESS[control.status] < PROGRESS[was.status]
+            ? 'regressed'
+            : 'updated';
+
+    changes.push({
+      controlKey: control.controlKey,
+      title: control.title,
+      direction,
+      from: was.status,
+      to: control.status,
+      fromLabel: was.answerLabel,
+      toLabel: control.answerLabel,
+    });
+  }
+
+  // Regressions first: they are the reason to read this section at all.
+  const order: Record<ChangeDirection, number> = { regressed: 0, improved: 1, answered: 2, updated: 3 };
+  changes.sort((a, b) => order[a.direction] - order[b.direction] || a.title.localeCompare(b.title));
+
+  return {
+    since,
+    previousScore: previous.score,
+    scoreDelta: current.score - previous.score,
+    changes,
+  };
+}

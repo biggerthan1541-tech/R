@@ -15,6 +15,8 @@ export type Env = {
   databaseFile: string | undefined;
   secureCookies: boolean;
   nodeEnv: string;
+  /** When set, self-serve signup requires this code. Unset means open signup. */
+  signupInviteCode: string | null;
 };
 
 const MIN_SECRET_LENGTH = 32;
@@ -60,5 +62,6 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): Env {
     // Secure cookies require HTTPS, which local development does not have.
     secureCookies: source.SECURE_COOKIES ? source.SECURE_COOKIES === 'true' : nodeEnv === 'production',
     nodeEnv,
+    signupInviteCode: source.SIGNUP_INVITE_CODE?.trim() || null,
   };
 }

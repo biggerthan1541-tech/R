@@ -1,4 +1,4 @@
-import type { Assessment } from '../domain/readiness.ts';
+import type { Assessment, AssessmentDelta } from '../domain/readiness.ts';
 import { formatDate, formatDateTime, html, raw } from './html.ts';
 
 export type PackSnapshot = {
@@ -14,6 +14,8 @@ export type PackSnapshot = {
     primaryContact: string | null;
   };
   assessment: Assessment;
+  /** Absent on a client's first pack: there is nothing to compare against. */
+  delta?: AssessmentDelta | null;
 };
 
 const PACK_STYLES = `
@@ -79,6 +81,15 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
    nonce authorises a stylesheet element but NOT a style attribute, so an inline
    style here would be silently dropped by the browser. See test/csp.test.ts. */
 .caption { color: var(--muted); font-size: 12px; }
+.change { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.change:last-child { border-bottom: 0; }
+.change .what { flex: 1; }
+.change .move { color: var(--muted); font-size: 12.5px; }
+.delta-head { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }
+.delta-score { font-family: ui-sans-serif, -apple-system, sans-serif; font-weight: 700; font-size: 15px; }
+.delta-score.up { color: var(--pass); }
+.delta-score.down { color: var(--fail); }
+.delta-score.flat { color: var(--muted); }
 .muted { color: var(--muted); }
 .mb-lg { margin-bottom: 18px; }
 .t-passing th:nth-child(1), .t-passing td:nth-child(1) { width: 38%; }
@@ -89,8 +100,11 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
 .t-register th:nth-child(3), .t-register td:nth-child(3) { width: 30%; }
 .t-register th:nth-child(4), .t-register td:nth-child(4) { width: 28%; }
 .noprint { text-align: center; margin: 16px auto; max-width: 820px; font-family: ui-sans-serif, sans-serif; font-size: 13px; }
-.noprint button { font: inherit; font-weight: 600; padding: 8px 16px; border: 1px solid #1f4fd8;
-                  background: #1f4fd8; color: #fff; border-radius: 6px; cursor: pointer; }
+.noprint button, .noprint .btn-pdf { font: inherit; font-weight: 600; padding: 8px 16px;
+                  border: 1px solid #1f4fd8; border-radius: 6px; cursor: pointer;
+                  display: inline-block; text-decoration: none; margin: 0 3px; }
+.noprint .btn-pdf { background: #1f4fd8; color: #fff; }
+.noprint button { background: #fff; color: #1f4fd8; }
 @media print {
   body { background: #fff; }
   .sheet { margin: 0; max-width: none; padding: 0; }
@@ -99,12 +113,17 @@ td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-ali
 }
 `;
 
-export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): string {
+export function renderEvidencePack(
+  snapshot: PackSnapshot,
+  nonce: string,
+  pdfHref: string | null = null,
+): string {
   const { assessment: a, client, msp } = snapshot;
   const passing = a.controls.filter((c) => c.status === 'pass');
 
   const body = html`<div class="noprint">
-  <button id="print" type="button">Save as PDF</button>
+  ${pdfHref ? html`<a class="btn-pdf" href="${pdfHref}">Download PDF</a>` : ''}
+  <button id="print" type="button">Print</button>
 </div>
 <div class="sheet">
   <div class="brandbar">
@@ -143,6 +162,8 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
     <div><span class="k">Standard</span>${a.profile.name}</div>
     <div><span class="k">Published by</span>${a.profile.publisher}</div>
   </div>
+
+  ${snapshot.delta ? changeSection(snapshot.delta) : ''}
 
   ${a.gaps.length > 0
     ? html`
@@ -253,6 +274,48 @@ export function renderEvidencePack(snapshot: PackSnapshot, nonce: string): strin
 </head><body>${body}
 <script nonce="${safeNonce}">document.getElementById('print').addEventListener('click',function(){window.print()});</script>
 </body></html>`;
+}
+
+/**
+ * The section that turns a pack into a record rather than a one-off: what has
+ * actually moved since the last one, including anything that went backwards.
+ */
+function changeSection(delta: AssessmentDelta) {
+  const direction = delta.scoreDelta > 0 ? 'up' : delta.scoreDelta < 0 ? 'down' : 'flat';
+  const sign = delta.scoreDelta > 0 ? '+' : '';
+
+  return html`
+    <h2>What has changed since ${formatDate(delta.since)}</h2>
+    <div class="delta-head">
+      <span class="delta-score ${raw(direction)}">
+        ${delta.scoreDelta === 0 ? 'Score unchanged' : html`Score ${sign}${delta.scoreDelta}`}
+      </span>
+      <span class="caption">was ${delta.previousScore} out of 100 on ${formatDate(delta.since)}</span>
+    </div>
+    ${delta.changes.length === 0
+      ? html`<p>No control changed position in this period.</p>`
+      : html`<div>
+          ${delta.changes.map(
+            (change) => html`<div class="change">
+              <span class="pill ${raw(pillFor(change.direction))}">${changeWord(change.direction)}</span>
+              <span class="what">
+                <strong>${change.title}</strong>
+                <div class="move">
+                  ${change.fromLabel ?? 'not answered'} &rarr; ${change.toLabel ?? 'not answered'}
+                </div>
+              </span>
+            </div>`,
+          )}
+        </div>`}
+  `;
+}
+
+function pillFor(direction: string): string {
+  return direction === 'regressed' ? 'fail' : direction === 'improved' ? 'pass' : 'unknown';
+}
+
+function changeWord(direction: string): string {
+  return { improved: 'Improved', regressed: 'Slipped', answered: 'Answered', updated: 'Updated' }[direction] ?? direction;
 }
 
 function statusWord(status: string): string {

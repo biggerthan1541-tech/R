@@ -8,7 +8,9 @@ This file documents the repository, development conventions, and environment con
 
 `biggerthan1541-tech/R` is **Readiness** — a compliance and cyber-insurance-readiness platform for SMBs, sold through the MSP channel. See `README.md` for the product shape, the data model, and how to run it.
 
-Built in phases; **Phases 1 and 2 are complete** (evidence core + single-client flow; identity, access control, roll-up console, client portal, audit log). Phases 3–4 (white-label output and scheduled generation, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
+Built in phases; **Phases 1 and 2 are complete**, plus the end-to-end operator path: self-serve signup, readiness scored across every assigned profile at once, PDF export, and a what-changed-since-last-time record on every regenerated pack. Phases 3–4 (white-label branding and scheduled generation, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
+
+The product test to apply to any change: **does this move an MSP closer to handing an insurer a credible pack?** `test/operator-journey.test.ts` walks that path over HTTP against an empty database and is the first test to run when the flow changes.
 
 ### Stack
 
@@ -127,12 +129,12 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```bash
 npm install
-npm run setup       # write .env with a generated SESSION_SECRET
-npm run demo        # seed config + tenant + users + a worked example client
-npm start           # http://localhost:3000
+npm run setup       # one-time: write .env with a generated SESSION_SECRET
+npm start           # http://localhost:3000 -> "Set up your MSP" (no seeding needed)
+npm run demo        # optional worked example: tenant + users + a client with history
 npm run dev         # with reload
 
-npm test            # node:test, no runner dependency (85 tests)
+npm test            # node:test, no runner dependency (121 tests)
 npm run typecheck   # tsc --noEmit
 npm run reset       # delete the database file
 ```
@@ -157,7 +159,7 @@ R/
 │   ├── auth/                  ← passwords (scrypt), tokens, sessions, permission checks
 │   ├── http/                  ← cookies, security (CSP/CSRF/headers), validation
 │   ├── domain/                ← evaluate, config-loader, readiness scoring, roles, types
-│   ├── render/                ← html escaping, layout, console/client views, auth views, evidence pack
+│   ├── render/                ← html escaping, layout, console/client views, auth views, evidence pack, pdf
 │   ├── server.ts              ← Fastify routes
 │   └── cli.ts                 ← setup / seed / demo / reset
 └── test/                      ← isolation, migrations, no-raw-sql, security, access,
