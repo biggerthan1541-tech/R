@@ -4,25 +4,68 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { db as sharedDb, projectRoot, type Db } from './db/connection.ts';
 import { ensureMsp } from './db/msps.ts';
-import { forTenant } from './db/tenant.ts';
+import { forTenant, lookupTenantForLogin, type TenantDb } from './db/tenant.ts';
+import { hashPassword } from './auth/passwords.ts';
+import { loadRoles } from './domain/roles.ts';
 import { getControl, listControls, syncConfig } from './domain/config-loader.ts';
 import { evaluateControl } from './domain/evaluate.ts';
 import { assessClient } from './domain/readiness.ts';
 import { generatePack } from './server.ts';
 
-function seed(db: Db): void {
+/** Creates the user if the address is free, and reports the password to use. */
+async function ensureUser(
+  tenant: TenantDb,
+  db: Db,
+  input: { email: string; name: string; role: string; password?: string },
+): Promise<{ email: string; password: string | null }> {
+  if (lookupTenantForLogin(db, input.email)) return { email: input.email, password: null };
+
+  const password = input.password ?? randomBytes(12).toString('base64url');
+  const user = await tenant.createUser({
+    email: input.email,
+    name: input.name,
+    role: input.role,
+    passwordHash: await hashPassword(password),
+    createdBy: null,
+  });
+  void user;
+  return { email: input.email, password };
+}
+
+async function seed(db: Db): Promise<void> {
   const { controls, profiles } = syncConfig(db);
-  console.log(`Synced ${controls} control definitions and ${profiles} requirement profiles from config/.`);
+  const roleCatalogue = loadRoles();
+  console.log(
+    `Synced ${controls} control definitions, ${profiles} requirement profiles ` +
+      `and ${roleCatalogue.roles.length} roles from config/.`,
+  );
+
   const mspId = ensureMsp(db, 'northwind-it', 'Northwind IT Services');
+  const tenant = forTenant(db, mspId);
   console.log(`Tenant ready: Northwind IT Services (${mspId})`);
+
+  const accounts = await Promise.all([
+    ensureUser(tenant, db, { email: 'owner@northwind.example', name: 'A. Okafor', role: 'owner' }),
+    ensureUser(tenant, db, { email: 'tech@northwind.example', name: 'J. Bell', role: 'operator' }),
+    ensureUser(tenant, db, { email: 'auditor@northwind.example', name: 'M. Sandhu', role: 'read_only' }),
+  ]);
+
+  const created = accounts.filter((account) => account.password !== null);
+  if (created.length > 0) {
+    console.log('\nSign in with:');
+    for (const account of created) console.log(`  ${account.email.padEnd(30)} ${account.password}`);
+    console.log('\nThese are shown once. Re-run `npm run reset && npm run seed` to start over.');
+  } else {
+    console.log('Users already exist — passwords unchanged.');
+  }
 }
 
 /**
  * Builds a worked example: one client, a dated history showing a control being
  * remediated over time, and a generated pack.
  */
-function demo(db: Db): void {
-  seed(db);
+async function demo(db: Db): Promise<void> {
+  await seed(db);
   const mspId = ensureMsp(db, 'northwind-it', 'Northwind IT Services');
   const tenant = forTenant(db, mspId);
 
@@ -139,21 +182,23 @@ const isEntrypoint =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isEntrypoint) {
-  switch (process.argv[2]) {
-    case 'setup':
-      setup();
-      break;
-    case 'seed':
-      seed(sharedDb());
-      break;
-    case 'demo':
-      demo(sharedDb());
-      break;
-    case 'reset':
-      reset();
-      break;
-    default:
-      console.error('Usage: tsx src/cli.ts <setup|seed|demo|reset>');
-      process.exit(1);
-  }
+  await (async () => {
+    switch (process.argv[2]) {
+      case 'setup':
+        setup();
+        break;
+      case 'seed':
+        await seed(sharedDb());
+        break;
+      case 'demo':
+        await demo(sharedDb());
+        break;
+      case 'reset':
+        reset();
+        break;
+      default:
+        console.error('Usage: tsx src/cli.ts <setup|seed|demo|reset>');
+        process.exit(1);
+    }
+  })();
 }

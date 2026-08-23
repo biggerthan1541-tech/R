@@ -20,6 +20,10 @@ export function getMspBySlug(db: Db, slug: string): Msp | undefined {
   return db.prepare(`SELECT id, slug, name FROM msps WHERE slug = ?`).get(slug) as Msp | undefined;
 }
 
+export function getMspById(db: Db, mspId: string): Msp | undefined {
+  return db.prepare(`SELECT id, slug, name FROM msps WHERE id = ?`).get(mspId) as Msp | undefined;
+}
+
 export function firstMsp(db: Db): Msp | undefined {
   return db.prepare(`SELECT id, slug, name FROM msps ORDER BY created_at LIMIT 1`).get() as Msp | undefined;
 }

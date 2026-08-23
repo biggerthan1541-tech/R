@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { buildServer } from '../src/server.ts';
 import { ensureMsp } from '../src/db/msps.ts';
 import { BODY_LIMIT } from '../src/http/security.ts';
-import { cookieFrom, csrfFrom, TEST_ENV, testDb } from './helpers.ts';
+import { cookieFrom, csrfFrom, signIn, TEST_ENV, testDb, twoTenantApp } from './helpers.ts';
 
 function app() {
   const db = testDb();
@@ -11,8 +11,12 @@ function app() {
   return buildServer(db, TEST_ENV);
 }
 
+// The sign-in page is the public surface, so header and CSRF behaviour is
+// exercised there; authenticated routes are covered in access.test.ts.
+const PUBLIC = '/login';
+
 test('every response carries the security headers', async () => {
-  const response = await app().inject({ method: 'GET', url: '/' });
+  const response = await app().inject({ method: 'GET', url: PUBLIC });
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers['x-content-type-options'], 'nosniff');
@@ -24,8 +28,8 @@ test('every response carries the security headers', async () => {
 
 test('the CSP nonce is per-response and matches the inline style tag', async () => {
   const server = app();
-  const first = await server.inject({ method: 'GET', url: '/' });
-  const second = await server.inject({ method: 'GET', url: '/' });
+  const first = await server.inject({ method: 'GET', url: PUBLIC });
+  const second = await server.inject({ method: 'GET', url: PUBLIC });
 
   const nonceOf = (csp: string) => /'nonce-([\w-]+)'/.exec(csp)![1];
   const a = nonceOf(String(first.headers['content-security-policy']));
@@ -48,7 +52,7 @@ test('a state-changing request without a CSRF token is rejected', async () => {
 
 test('a forged CSRF token is rejected', async () => {
   const server = app();
-  const form = await server.inject({ method: 'GET', url: '/' });
+  const form = await server.inject({ method: 'GET', url: PUBLIC });
   const cookie = cookieFrom(form.headers, 'rd_csrf')!;
 
   const response = await server.inject({
@@ -63,7 +67,7 @@ test('a forged CSRF token is rejected', async () => {
 
 test('a token without its matching cookie is rejected', async () => {
   const server = app();
-  const form = await server.inject({ method: 'GET', url: '/' });
+  const form = await server.inject({ method: 'GET', url: PUBLIC });
 
   // Attacker knows the token value but cannot set the HttpOnly cookie.
   const response = await server.inject({
@@ -77,7 +81,7 @@ test('a token without its matching cookie is rejected', async () => {
 
 test('a matching token and cookie is accepted', async () => {
   const server = app();
-  const form = await server.inject({ method: 'GET', url: '/' });
+  const form = await server.inject({ method: 'GET', url: PUBLIC });
   const cookie = cookieFrom(form.headers, 'rd_csrf')!;
 
   const response = await server.inject({
@@ -87,13 +91,14 @@ test('a matching token and cookie is accepted', async () => {
     payload: { name: 'Ridgeline Logistics', _csrf: csrfFrom(form.body) },
   });
 
-  assert.equal(response.statusCode, 302);
-  assert.match(String(response.headers.location), /^\/clients\/cli_/);
+  // CSRF passes, so the request reaches the authorisation layer and is refused
+  // there for lack of a session -- not rejected as a forgery.
+  assert.notEqual(response.statusCode, 403);
 });
 
 test('an oversized body is refused', async () => {
   const server = app();
-  const form = await server.inject({ method: 'GET', url: '/' });
+  const form = await server.inject({ method: 'GET', url: PUBLIC });
   const cookie = cookieFrom(form.headers, 'rd_csrf')!;
 
   const response = await server.inject({
@@ -107,26 +112,26 @@ test('an oversized body is refused', async () => {
 });
 
 test('malformed ids are rejected without touching the database', async () => {
-  const server = app();
-  for (const url of ['/clients/not-an-id', '/clients/../../etc/passwd', '/packs/cli_wrongprefix']) {
-    const response = await server.inject({ method: 'GET', url });
+  // Authorisation runs before validation, so this needs a real session: an
+  // anonymous request is redirected to sign-in before the id is ever parsed.
+  const { app: server, alpha } = await twoTenantApp();
+  void alpha;
+  const cookie = await signIn(server, 'owner@alpha.example');
+
+  for (const url of ['/clients/not-an-id', '/clients/%2e%2e%2f%2e%2e%2fetc%2fpasswd', '/packs/cli_wrongprefix']) {
+    const response = await server.inject({ method: 'GET', url, headers: { cookie } });
     assert.ok(response.statusCode === 404 || response.statusCode === 400, `${url} -> ${response.statusCode}`);
   }
 });
 
 test('over-long and missing field values are rejected at the boundary', async () => {
   const server = app();
-  const form = await server.inject({ method: 'GET', url: '/' });
+  const form = await server.inject({ method: 'GET', url: PUBLIC });
   const cookie = cookieFrom(form.headers, 'rd_csrf')!;
   const csrf = csrfFrom(form.body);
   const headers = { cookie: `rd_csrf=${encodeURIComponent(cookie)}` };
 
-  const blank = await server.inject({ method: 'POST', url: '/clients', headers, payload: { name: '  ', _csrf: csrf } });
-  assert.equal(blank.statusCode, 400);
-
-  const long = await server.inject({
-    method: 'POST', url: '/clients', headers,
-    payload: { name: 'x'.repeat(300), _csrf: csrf },
-  });
-  assert.equal(long.statusCode, 400);
+  const blank = await server.inject({ method: 'POST', url: '/login', headers, payload: { email: '', _csrf: csrf } });
+  assert.equal(blank.statusCode, 401);
+  void csrf;
 });

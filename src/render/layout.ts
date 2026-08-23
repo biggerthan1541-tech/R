@@ -26,10 +26,11 @@ body {
 a { color: var(--accent); }
 .wrap { max-width: 940px; margin: 0 auto; padding: 24px 20px 72px; }
 header.top { background: var(--card); border-bottom: 1px solid var(--line); }
-header.top .wrap { padding: 14px 20px; display: flex; align-items: baseline; gap: 16px; }
+header.top .wrap { padding: 12px 20px; display: flex; align-items: center; gap: 16px; min-height: 46px; }
 header.top strong { font-size: 15px; letter-spacing: -0.01em; }
 header.top strong a { color: inherit; text-decoration: none; }
-header.top .tenant { color: var(--muted); font-size: 13px; margin-left: auto; }
+header.top .tenant { color: var(--muted); font-size: 13px; margin-left: auto;
+                     display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 h1 { font-size: 26px; letter-spacing: -0.02em; margin: 20px 0 4px; }
 h2 { font-size: 17px; letter-spacing: -0.01em; margin: 32px 0 10px; }
 h3 { font-size: 15px; margin: 0 0 6px; }

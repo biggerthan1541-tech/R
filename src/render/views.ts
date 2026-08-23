@@ -4,53 +4,124 @@ import type { Control, ProfileDefinition } from '../domain/types.ts';
 import { formatDate, formatDateTime, html, raw, type SafeHtml } from './html.ts';
 import { csrfField, page, requirementPill, statusPill, type ViewContext } from './layout.ts';
 
-export function clientsPage(
-  ctx: ViewContext,
-  clients: ClientRow[],
-  flash: { ok?: string; err?: string } = {},
-): string {
+export type ClientSummary = {
+  client: ClientRow;
+  profileName: string | null;
+  score: number | null;
+  state: string | null;
+  stateHeadline: string | null;
+  answered: number;
+  total: number;
+  topGap: string | null;
+  lastActivity: string | null;
+};
+
+/**
+ * The roll-up console: every client an MSP has, with where each one stands, on
+ * one screen. Sorted worst-first, because the reason to open this page is to
+ * find out who needs attention.
+ */
+export function consolePage(input: {
+  ctx: ViewContext;
+  summaries: ClientSummary[];
+  profiles: ProfileDefinition[];
+  canCreate: boolean;
+  flash: { ok?: string; err?: string };
+}): string {
+  const { ctx, summaries, profiles, canCreate, flash } = input;
+
+  const scored = summaries.filter((row) => row.score !== null);
+  const averageScore = scored.length
+    ? Math.round(scored.reduce((sum, row) => sum + (row.score ?? 0), 0) / scored.length)
+    : null;
+  const notReady = summaries.filter((row) => row.state === 'not_ready').length;
+  const unconfigured = summaries.filter((row) => row.score === null).length;
+
   const body = html`
     ${flash.err ? html`<div class="err">${flash.err}</div>` : ''}
     ${flash.ok ? html`<div class="ok">${flash.ok}</div>` : ''}
 
-    <h1>Clients</h1>
-    <p class="lede">Every client below belongs to ${ctx.msp.name}. Nothing from another provider is reachable from here.</p>
+    <h1>${ctx.msp.name}</h1>
+    <p class="lede">
+      Every client you manage, worst first. Nothing from another provider is reachable from this
+      account. <a href="/audit">Audit log</a> · <a href="/users">People</a>
+    </p>
 
-    ${clients.length === 0
+    <div class="grid" style="margin-bottom:18px">
+      <div class="stat"><div class="n">${summaries.length}</div><div class="k">Clients</div></div>
+      <div class="stat"><div class="n">${averageScore ?? '—'}</div><div class="k">Average readiness</div></div>
+      <div class="stat"><div class="n">${notReady}</div><div class="k">Not ready</div></div>
+      <div class="stat"><div class="n">${unconfigured}</div><div class="k">Awaiting setup</div></div>
+    </div>
+
+    ${summaries.length === 0
       ? html`<div class="card"><p class="muted" style="margin:0">
-          No clients yet. Add your first one below, then record where they stand on each control.
+          No clients yet.${canCreate ? ' Add your first one below — it takes about a minute.' : ''}
         </p></div>`
       : html`<div class="card">
           <table>
-            <thead><tr><th>Client</th><th>Industry</th><th>Staff</th><th>Added</th></tr></thead>
+            <thead><tr>
+              <th style="width:26%">Client</th><th style="width:9%">Score</th><th style="width:16%">Status</th>
+              <th style="width:19%">Assessed against</th><th style="width:12%">Answered</th><th>Biggest gap</th>
+            </tr></thead>
             <tbody>
-              ${clients.map(
-                (client) => html`<tr>
-                  <td><a href="/clients/${client.id}"><strong>${client.name}</strong></a></td>
-                  <td class="muted">${client.industry ?? '--'}</td>
-                  <td class="muted">${client.employee_count ?? '--'}</td>
-                  <td class="muted">${formatDate(client.created_at)}</td>
+              ${summaries.map(
+                (row) => html`<tr>
+                  <td>
+                    <a href="/clients/${row.client.id}"><strong>${row.client.name}</strong></a>
+                    ${row.client.industry ? html`<br /><span class="muted small">${row.client.industry}</span>` : ''}
+                  </td>
+                  <td>${row.score === null ? html`<span class="muted">—</span>` : html`<strong>${row.score}</strong>`}</td>
+                  <td>${row.state ? statePill(row.state, row.stateHeadline ?? row.state) : html`<span class="pill unknown">Not set up</span>`}</td>
+                  <td class="small muted">${row.profileName ?? 'No profile assigned'}</td>
+                  <td class="small muted">${row.total > 0 ? html`${row.answered}/${row.total}` : '—'}</td>
+                  <td class="small muted">${row.topGap ?? (row.score === null ? 'Assign a profile to begin' : 'Nothing outstanding')}</td>
                 </tr>`,
               )}
             </tbody>
           </table>
         </div>`}
 
-    <h2>Add a client</h2>
-    <form method="post" action="/clients" class="card">
-      ${csrfField(ctx)}
-      <div class="row">
-        <div><label for="name">Company name</label><input type="text" id="name" name="name" required></div>
-        <div><label for="industry">Industry</label><input type="text" id="industry" name="industry"></div>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <div><label for="employeeCount">Staff count</label><input type="number" id="employeeCount" name="employeeCount" min="0"></div>
-        <div><label for="primaryContact">Main contact</label><input type="text" id="primaryContact" name="primaryContact"></div>
-      </div>
-      <div style="margin-top:14px"><button type="submit">Add client</button></div>
-    </form>
+    ${canCreate
+      ? html`
+          <h2>Add a client</h2>
+          <form method="post" action="/clients" class="card">
+            ${csrfField(ctx)}
+            <p class="hint" style="margin-top:0">
+              Name and one profile is enough to start — everything else can wait. You land straight
+              on the control form, so a new client goes from nothing to a scored evidence pack in a
+              single sitting.
+            </p>
+            <div class="row">
+              <div><label for="name">Company name</label><input type="text" id="name" name="name" required autofocus></div>
+              <div><label for="industry">Industry <span class="muted">(optional)</span></label><input type="text" id="industry" name="industry"></div>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <div><label for="employeeCount">Staff <span class="muted">(optional)</span></label><input type="number" id="employeeCount" name="employeeCount" min="0"></div>
+              <div><label for="primaryContact">Main contact <span class="muted">(optional)</span></label><input type="text" id="primaryContact" name="primaryContact"></div>
+            </div>
+            <div style="margin-top:14px">
+              <label>Assess against</label>
+              <div class="hint" style="margin-bottom:6px">Pick at least one. You can change this later.</div>
+              ${profiles.map(
+                (profile, index) => html`<label style="font-weight:400;display:block;margin-bottom:4px">
+                  <input type="checkbox" name="profileKey" value="${profile.key}"
+                    ${raw(index === 0 ? 'checked' : '')}>
+                  ${profile.name} <span class="muted small">— ${profile.publisher}</span>
+                </label>`,
+              )}
+            </div>
+            <div style="margin-top:14px"><button type="submit">Add client and start recording</button></div>
+          </form>
+        `
+      : ''}
   `;
-  return page('Clients', ctx, body);
+  return page(ctx.msp.name, ctx, body);
+}
+
+function statePill(state: string, label: string): SafeHtml {
+  const tone = state === 'ready' ? 'pass' : state === 'conditional' ? 'partial' : 'fail';
+  return html`<span class="pill ${raw(tone)}">${label}</span>`;
 }
 
 export function clientPage(input: {
@@ -62,9 +133,12 @@ export function clientPage(input: {
   assignedProfiles: string[];
   assessment: Assessment | null;
   packs: PackRow[];
+  portalSection: SafeHtml | null;
+  permissions: { evidenceWrite: boolean; configure: boolean; generate: boolean };
   flash: { ok?: string; err?: string };
 }): string {
   const { ctx, client, controls, current, profiles, assignedProfiles, assessment, packs, flash } = input;
+  const { permissions } = input;
 
   const body = html`
     ${flash.err ? html`<div class="err">${flash.err}</div>` : ''}
@@ -98,7 +172,8 @@ export function clientPage(input: {
             <div class="stat"><div class="n">${assessment.coverage.answered}/${assessment.coverage.total}</div><div class="k">Answered</div></div>
           </div>
           <div class="card tight"><p class="small" style="margin:0">${assessment.stateExplanation}</p></div>
-          <form method="post" action="/clients/${client.id}/packs" style="margin:14px 0 0">
+          ${permissions.generate
+            ? html`<form method="post" action="/clients/${client.id}/packs" style="margin:14px 0 0">
             ${csrfField(ctx)}
             <input type="hidden" name="profileKey" value="${assessment.profile.key}">
             <div class="row">
@@ -108,14 +183,16 @@ export function clientPage(input: {
               </div>
               <div style="flex:0 0 auto"><button type="submit">Generate evidence pack</button></div>
             </div>
-          </form>
+          </form>`
+            : ''}
         `
       : html`<div class="card"><p class="muted" style="margin:0">
           Assign a requirement profile below to see this client's readiness score.
         </p></div>`}
 
     <h2>Requirement profiles</h2>
-    <form method="post" action="/clients/${client.id}/profiles" class="card">
+    ${permissions.configure
+      ? html`<form method="post" action="/clients/${client.id}/profiles" class="card">
       ${csrfField(ctx)}
       <p class="hint" style="margin-top:0">
         Which obligations does this client have to satisfy? Scoring and the evidence pack are always
@@ -134,10 +211,15 @@ export function clientPage(input: {
         </div>`,
       )}
       <button type="submit">Save profiles</button>
-    </form>
+    </form>`
+      : html`<div class="card"><p class="small muted" style="margin:0">
+          Assessed against ${assignedProfiles.length > 0 ? assignedProfiles.join(', ') : 'no profile yet'}.
+          Your role cannot change this.
+        </p></div>`}
 
     <h2>Record where this client stands</h2>
-    <form method="post" action="/clients/${client.id}/evidence" class="card">
+    ${permissions.evidenceWrite
+      ? html`<form method="post" action="/clients/${client.id}/evidence" class="card">
       ${csrfField(ctx)}
       <div class="row" style="margin-bottom:6px">
         <div style="flex:0 0 260px">
@@ -152,7 +234,13 @@ export function clientPage(input: {
           Only changed answers are written. Nothing is ever overwritten.
         </span>
       </div>
-    </form>
+    </form>`
+      : html`<div class="card">
+          ${controls.map((control) => readOnlyControl(control, current.get(control.key)))}
+          <p class="hint" style="margin:12px 0 0">Your role is read-only, so these cannot be changed.</p>
+        </div>`}
+
+    ${input.portalSection ?? ''}
 
     <h2>Evidence packs</h2>
     ${packs.length === 0
@@ -213,6 +301,19 @@ function controlField(
           <a href="/clients/${row.client_id}/history?control=${control.key}">history</a>
         </div>`
       : ''}
+  </div>`;
+}
+
+function readOnlyControl(control: Control, row: EvidenceRow | undefined): SafeHtml {
+  return html`<div class="control">
+    <div class="control-head">
+      <h3>${control.title}</h3>
+      ${statusPill(row?.status ?? 'unknown')}
+      <span class="muted small" style="margin-left:auto">${control.category}</span>
+    </div>
+    <div class="hint">
+      ${row ? html`${row.answer_label} — recorded ${formatDateTime(row.recorded_at)} by ${row.recorded_by}` : 'Not answered'}
+    </div>
   </div>`;
 }
 
