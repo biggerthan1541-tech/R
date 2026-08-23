@@ -100,6 +100,10 @@ make sure the branch selector shows the branch your code is on, leave the tag bo
 It takes two or three minutes. The last step checks your real address and fails
 loudly if the site is not answering, so a green tick means it genuinely worked.
 
+> The application image is private to your repository. The deploy hands your
+> server a short-lived token for that one pull and logs it out afterwards, so no
+> permanent registry password ends up sitting on the machine.
+
 ### 6. Create your login
 
 Open `https://readiness.yourcompany.com`. Choose **Set up your MSP**, enter your

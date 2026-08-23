@@ -23,6 +23,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v4
 
@@ -61,11 +64,25 @@ jobs:
           echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:$TAG" >> $GITHUB_ENV
           echo "deploying $TAG"
 
+      - name: Let the server pull from the registry
+        # Published images are private to the repository. This hands the server
+        # a short-lived token for this deploy only, so no long-lived registry
+        # credential has to live on the box.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin" <<< "${{ secrets.GITHUB_TOKEN }}"
+
       - name: Pull and restart
         run: |
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "cd /opt/readiness && READINESS_IMAGE=$IMAGE docker compose pull && READINESS_IMAGE=$IMAGE docker compose up -d"
 
+
+      - name: Log the server out of the registry
+        if: always()
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "docker logout ghcr.io" || true
 
       - name: Verify the live site answers
         # Checks the real public URL, not the container. A deploy that leaves the
