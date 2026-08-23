@@ -14,9 +14,6 @@
 --  4. Reads go through the scoped repository in src/db/tenant.ts, which also
 --     refuses to run SQL that touches a scoped table without an msp_id filter.
 
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-
 -- ---------------------------------------------------------------------------
 -- Tenants
 -- ---------------------------------------------------------------------------

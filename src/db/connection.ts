@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { migrate } from './migrate.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const projectRoot = join(here, '..', '..');
@@ -13,8 +14,11 @@ export function openDatabase(file?: string): Db {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
 
   const db = new Database(path);
+  // Connection-level pragmas. These cannot live in a migration: journal_mode is
+  // rejected inside a transaction, and foreign_keys is per-connection anyway.
+  if (path !== ':memory:') db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  db.exec(readFileSync(join(here, 'schema.sql'), 'utf8'));
+  migrate(db);
   return db;
 }
 
