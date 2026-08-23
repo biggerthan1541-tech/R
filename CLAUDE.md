@@ -6,7 +6,28 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+`biggerthan1541-tech/R` is **Readiness** — a compliance and cyber-insurance-readiness platform for SMBs, sold through the MSP channel. See `README.md` for the product shape, the data model, and how to run it.
+
+Built in phases; **Phases 1 and 2 are complete**, plus the end-to-end operator path: self-serve signup, readiness scored across every assigned profile at once, PDF export, and a what-changed-since-last-time record on every regenerated pack. Phases 3–4 (white-label branding and scheduled generation, wholesale billing) are specified but deliberately not built. Do not build a later phase early.
+
+The product test to apply to any change: **does this move an MSP closer to handing an insurer a credible pack?** `test/operator-journey.test.ts` walks that path over HTTP against an empty database and is the first test to run when the flow changes.
+
+### Stack
+
+Node 22 + TypeScript (ESM, no build step, run via `tsx`), Fastify, SQLite via `better-sqlite3`, server-rendered HTML with an auto-escaping template tag, `node:test`. Four runtime dependencies; keep it that way.
+
+### Non-negotiables
+
+These are enforced by tests, not just convention — `test/no-raw-sql.test.ts` and `test/access.test.ts` fail the build if any is broken.
+
+- **No SQL outside `src/db/`.** All customer data goes through the scoped repository in `src/db/tenant.ts`, and no module other than `tenant.ts` may query a tenant-scoped table. Never add a tenant-scoped table without a composite foreign key onto its parent plus an entry in `TENANT_SCOPED_TABLES`. The single pre-auth exception is `lookupTenantForLogin`, which returns an msp id and nothing else.
+- **The evidence log is append-only.** No `UPDATE` or `DELETE` path for `evidence_records`, ever. Current state is the highest `seq`. The audit log is the same, plus a per-tenant hash chain.
+- **Control, profile and role logic is data.** Pass/fail rules, gap copy and permissions live in `config/`, never in `src/`. Nothing under `src/domain/` should know what MFA is, or that an "operator" exists.
+- **Escape everything.** Build HTML with the `html` tag from `src/render/html.ts`; client names and free-text notes reach client-facing documents.
+- **Every form carries CSRF.** Use `csrfField(ctx)` from `src/render/layout.ts`; the hook rejects state-changing requests without it.
+- **Every route declares a permission.** Call `requirePermission(request, '<permission>')` — never `requireActor` alone for anything a role might not be allowed to do.
+- **Migrations are immutable.** Add `src/db/migrations/NNN_*.sql`; never edit one that has shipped. The runner rejects a changed checksum.
+- **No secrets in code.** Configuration comes from `src/config/env.ts`, which fails startup when something required is missing. There are no defaults for signing keys.
 
 ---
 
@@ -25,7 +46,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/msp-compliance-phase-1-8a31mx` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -106,29 +127,43 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ## Running & Testing
 
-> To be filled in once the project has a build system and test runner.
-
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+npm install
+npm run setup       # one-time: write .env with a generated SESSION_SECRET
+npm start           # http://localhost:3000 -> "Set up your MSP" (no seeding needed)
+npm run demo        # optional worked example: tenant + users + a client with history
+npm run dev         # with reload
 
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+npm test            # node:test, no runner dependency (121 tests)
+npm run typecheck   # tsc --noEmit
+npm run reset       # delete the database file
 ```
+
+`npm run demo` prints sign-in credentials once. Schema changes go in a new migration file under `src/db/migrations/`; they are applied automatically on open.
 
 ---
 
 ## Project Structure
 
-> To be filled in as the codebase grows.
-
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md
+├── README.md                  ← product, data model, how to verify each phase
+├── config/
+│   ├── controls.json          ← control definitions, pass/fail rules, gap copy
+│   ├── roles.json             ← roles → permissions
+│   └── profiles/*.json        ← requirement profiles (insurer, CMMC, HIPAA, SOC 2)
+├── src/
+│   ├── config/env.ts          ← required configuration, validated at startup
+│   ├── db/                    ← migrations, connection, msps, reference, tenant (isolation boundary)
+│   ├── auth/                  ← passwords (scrypt), tokens, sessions, permission checks
+│   ├── http/                  ← cookies, security (CSP/CSRF/headers), validation
+│   ├── domain/                ← evaluate, config-loader, readiness scoring, roles, types
+│   ├── render/                ← html escaping, layout, console/client views, auth views, evidence pack, pdf
+│   ├── server.ts              ← Fastify routes
+│   └── cli.ts                 ← setup / seed / demo / reset
+└── test/                      ← isolation, migrations, no-raw-sql, security, access,
+                                 portal, audit, evaluation, scoring, rendering
 ```
 
 ---

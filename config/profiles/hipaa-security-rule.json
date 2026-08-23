@@ -1,0 +1,17 @@
+{
+  "key": "hipaa_security_rule",
+  "name": "HIPAA Security Rule",
+  "publisher": "US Dept. of Health and Human Services",
+  "version": "45 CFR 164 subpart C",
+  "description": "Administrative, physical and technical safeguards required of covered entities and business associates handling protected health information.",
+  "items": [
+    { "control": "encryption", "weight": 22, "requirement": "mandatory", "note": "164.312(a)(2)(iv) — addressable, but a breach of encrypted PHI is not reportable." },
+    { "control": "access_offboarding", "weight": 20, "requirement": "mandatory", "note": "164.308(a)(3)(ii)(C) — termination procedures." },
+    { "control": "mfa_coverage", "weight": 16, "requirement": "mandatory", "note": "164.312(d) — person or entity authentication." },
+    { "control": "incident_response_plan", "weight": 14, "requirement": "mandatory", "note": "164.308(a)(6) — security incident procedures, with a 60-day breach notification clock." },
+    { "control": "tested_backups", "weight": 12, "requirement": "mandatory", "note": "164.308(a)(7)(ii)(A)-(D) — data backup and disaster recovery, with testing." },
+    { "control": "security_awareness_training", "weight": 8, "requirement": "mandatory", "note": "164.308(a)(5) — security awareness and training." },
+    { "control": "edr_deployment", "weight": 5, "requirement": "recommended", "note": "164.308(a)(5)(ii)(B) — protection from malicious software." },
+    { "control": "patch_management", "weight": 3, "requirement": "recommended" }
+  ]
+}

@@ -1,0 +1,283 @@
+{
+  "$comment": "Control definitions. Edit this file to add, remove or reword controls; then run `npm run seed` to sync into the database. Pass/fail logic lives in each control's `rules` array and is evaluated by src/domain/evaluate.ts — there is no control-specific logic anywhere in application code.",
+  "controls": [
+    {
+      "key": "mfa_coverage",
+      "title": "Multi-factor authentication",
+      "category": "Identity",
+      "sortOrder": 10,
+      "question": "Where is multi-factor authentication actually enforced today?",
+      "help": "Count only what is enforced by policy, not what is available or encouraged.",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "Nowhere" },
+          { "value": "some_users", "label": "Some staff, not enforced for everyone" },
+          { "value": "admins_only", "label": "Administrator accounts only" },
+          { "value": "email_and_remote", "label": "All staff on email and remote access" },
+          { "value": "everywhere", "label": "All staff, on every business system" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["everywhere", "email_and_remote"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["admins_only", "some_users"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "Right now a single stolen password is enough for someone to log in as one of your staff, read their mailbox, and send invoices or payment-change requests that look genuine to your customers and your bank. This is the most common way small businesses lose money to cybercrime, and it is the first question almost every insurer asks. Most will decline the policy outright, or write an exclusion that removes cover for exactly this kind of fraud.",
+          "fix": "Turn on multi-factor authentication for every member of staff on email and remote access. Start with anyone who can approve a payment or change bank details. This is a configuration change, not a purchase, and it is usually done in a day."
+        },
+        "partial": {
+          "consequence": "The accounts you have protected are safe, but the ones you have not are the way in. An attacker does not need an administrator to steal money — they only need the mailbox of someone your customers trust. Insurers treat partial coverage as no coverage and will price or exclude accordingly.",
+          "fix": "Extend multi-factor authentication to every remaining staff account on email and remote access, and set it to required rather than optional so nobody can turn it off."
+        }
+      }
+    },
+    {
+      "key": "edr_deployment",
+      "title": "Endpoint protection coverage",
+      "category": "Devices",
+      "sortOrder": 20,
+      "question": "What percentage of laptops, desktops and servers run managed endpoint protection?",
+      "help": "Managed means the alerts arrive somewhere a human watches. Enter a number from 0 to 100.",
+      "answer": { "type": "percent" },
+      "rules": [
+        { "when": { "op": "gte", "value": 98 }, "status": "pass" },
+        { "when": { "op": "gte", "value": 80 }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "A meaningful share of your computers have nothing watching them. Ransomware does not need to land on a well-protected machine — it only needs one unwatched one, and from there it reaches the file shares everyone else depends on. Without this in place you are looking at days of downtime rather than hours, and insurers commonly refuse ransomware cover entirely.",
+          "fix": "Deploy managed endpoint protection to every remaining computer and server, and produce a list showing the count of devices you own matches the count being monitored."
+        },
+        "partial": {
+          "consequence": "Most of your computers are covered, but the gap is what matters: the unmonitored machines are where an attack will start and sit unnoticed. Insurers ask for near-complete coverage and will treat a partial rollout as an open risk when they price your premium.",
+          "fix": "Find the remaining unprotected devices, install protection on them, and put a monthly check in place so newly issued machines cannot slip through."
+        }
+      }
+    },
+    {
+      "key": "tested_backups",
+      "title": "Backups you have actually restored",
+      "category": "Resilience",
+      "sortOrder": 30,
+      "question": "What is the state of your backups?",
+      "help": "\"Tested\" means someone restored real data and confirmed it opened correctly.",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "No reliable backups" },
+          { "value": "untested", "label": "Backups run, never restored from" },
+          { "value": "tested_stale", "label": "Restore tested, but more than 12 months ago" },
+          { "value": "tested_online", "label": "Restore tested in the last 12 months" },
+          { "value": "tested_offline", "label": "Restore tested in the last 12 months, with an offline or immutable copy" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["tested_offline"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["tested_online", "tested_stale"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "If your systems were encrypted or a server failed tomorrow, you have no proven way to get your data back. That turns a bad week into a business-ending event, and it removes the only leverage you have in a ransom negotiation. An untested backup is not a backup — it is an assumption, and roughly half of them fail on the first real attempt.",
+          "fix": "Perform a full test restore of your most important system, write down the date and how long it took, and keep at least one copy of your data somewhere an attacker who controls your network cannot delete it."
+        },
+        "partial": {
+          "consequence": "You can probably recover, but the copy an attacker can reach is the copy they will delete first. Modern ransomware goes after the backups before it encrypts anything, precisely because that is what forces the payment. Insurers ask specifically whether a copy is offline or immutable.",
+          "fix": "Add an offline or immutable copy of your backups that cannot be deleted from inside your network, and repeat the test restore within the next twelve months."
+        }
+      }
+    },
+    {
+      "key": "email_security",
+      "title": "Email spoofing protection",
+      "category": "Email",
+      "sortOrder": 40,
+      "question": "How is your domain protected against someone sending email as you?",
+      "help": "This is about your published DMARC policy and whether it is set to reject.",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "Nothing published" },
+          { "value": "spf_only", "label": "Basic sender records only" },
+          { "value": "monitor", "label": "Full records published, but set to monitor only" },
+          { "value": "quarantine", "label": "Set to send suspicious mail to junk" },
+          { "value": "reject", "label": "Set to reject forged mail outright" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["reject"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["quarantine", "monitor"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "Anyone in the world can send email that appears to come from your company address, and your customers have no way to tell it apart from the real thing. The usual result is a customer paying an invoice into a criminal's bank account and then asking you to make them whole. The reputational damage lands on you whether or not your systems were ever touched.",
+          "fix": "Publish the standard sender-authentication records for your domain and set the policy to reject, so forged mail is refused before it reaches anyone."
+        },
+        "partial": {
+          "consequence": "You can now see forged email being sent in your name, but you are not stopping it. Monitoring records the fraud; it does not prevent your customer from receiving the fake invoice and paying it.",
+          "fix": "Move your policy from monitoring to reject once you have confirmed your legitimate mail is passing. This is normally a two-week transition."
+        }
+      }
+    },
+    {
+      "key": "access_offboarding",
+      "title": "Removing access when people leave",
+      "category": "Identity",
+      "sortOrder": 50,
+      "question": "How quickly and reliably is access removed when someone leaves?",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "ad_hoc", "label": "No defined process" },
+          { "value": "informal", "label": "Usually done, but nothing written down" },
+          { "value": "checklist", "label": "Written checklist, completed same day" },
+          { "value": "checklist_reviewed", "label": "Written checklist, same day, plus a periodic review of who still has access" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["checklist_reviewed"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["checklist", "informal"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "Former employees still have live access to your systems. Some of them left on bad terms, and all of them are outside your control — if their personal device or password is compromised a year from now, the intruder walks straight into your business. Auditors treat orphaned accounts as a finding every single time, and it is one of the easiest things for an insurer to check after a claim.",
+          "fix": "Write a one-page leaver checklist covering email, remote access, shared systems and building access, and require it to be completed on the person's last day."
+        },
+        "partial": {
+          "consequence": "The process works when someone remembers it. Accounts accumulate quietly — a contractor here, a summer hire there — and nobody notices until an audit or an incident finds them. What is missing is the periodic check that would catch what the process missed.",
+          "fix": "Review the full list of who has access to each system twice a year, and remove anything you cannot account for."
+        }
+      }
+    },
+    {
+      "key": "patch_management",
+      "title": "Keeping software up to date",
+      "category": "Devices",
+      "sortOrder": 60,
+      "question": "How are security updates applied to computers and servers?",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "Left to individual staff" },
+          { "value": "manual", "label": "Done manually, no schedule" },
+          { "value": "scheduled", "label": "Automated on a schedule, no reporting" },
+          { "value": "scheduled_reported", "label": "Automated on a schedule, with a report showing what is missing" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["scheduled_reported"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["scheduled", "manual"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "Known flaws in your software stay open until someone happens to deal with them. Attackers scan for these automatically, often within days of a fix being published, so the machines that lag behind are found without anyone targeting you specifically. After an incident, an unpatched system with a fix available for months is the clearest possible evidence of negligence — which is exactly what an insurer looks for when deciding whether to pay.",
+          "fix": "Put updates on an automatic schedule for every computer and server, and check monthly that they are actually being installed."
+        },
+        "partial": {
+          "consequence": "Updates are being applied, but you cannot prove it or spot the machines that are silently failing. In practice a handful always are — the laptop that is never online at the right time, the server everyone is afraid to reboot — and those are the ones that get exploited.",
+          "fix": "Turn on reporting so you get a monthly list of devices missing updates, and work through the exceptions."
+        }
+      }
+    },
+    {
+      "key": "incident_response_plan",
+      "title": "A plan for when something goes wrong",
+      "category": "Governance",
+      "sortOrder": 70,
+      "question": "What incident response plan is in place?",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "Nothing written down" },
+          { "value": "informal", "label": "We would call our IT provider" },
+          { "value": "documented", "label": "Written plan with named contacts" },
+          { "value": "documented_tested", "label": "Written plan, rehearsed in the last 12 months" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["documented_tested"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["documented", "informal"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "In the first hours of a real incident nobody will know who to call, who can authorise shutting systems down, or what your legal reporting deadlines are. Those hours are when the damage multiplies, and most policies require you to notify the insurer quickly — miss the window and the claim can be denied on that basis alone, no matter how good the rest of your security was.",
+          "fix": "Write a one-page plan naming who is in charge, who to call at your IT provider and insurer, and what gets disconnected first. Print it, because the copy on the file server will not be reachable."
+        },
+        "partial": {
+          "consequence": "You have a plan, but it has never been tried. Plans fail in predictable ways on the day — the phone number belongs to someone who left, the person named is on holiday, nobody can find the policy number. A rehearsal is what turns the document into something that works under pressure.",
+          "fix": "Spend an hour walking the plan through a realistic scenario with the people named in it, and correct whatever does not hold up."
+        }
+      }
+    },
+    {
+      "key": "security_awareness_training",
+      "title": "Staff security training",
+      "category": "People",
+      "sortOrder": 80,
+      "question": "What security training do staff receive?",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "None" },
+          { "value": "onboarding_only", "label": "Once, when they join" },
+          { "value": "annual", "label": "At least once a year" },
+          { "value": "annual_simulated", "label": "At least once a year, plus simulated phishing tests" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["annual_simulated"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["annual", "onboarding_only"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "Your staff are the ones who receive the fraudulent email, and none of them have been shown what one looks like or told what to do about it. The convincing ones now reference real projects and real people. Untrained staff also tend to stay quiet after a mistake, which is what turns a five-minute problem into a five-day one.",
+          "fix": "Run short security training for all staff at least once a year, and make it explicit that reporting a suspected mistake immediately carries no blame."
+        },
+        "partial": {
+          "consequence": "Staff have been trained, but training alone does not tell you whether it worked. Simulated tests are what reveal which teams are still clicking, and they are what an insurer or auditor will ask you to evidence.",
+          "fix": "Add periodic simulated phishing tests and use the results to direct follow-up training where it is actually needed."
+        }
+      }
+    },
+    {
+      "key": "encryption",
+      "title": "Encryption of company data",
+      "category": "Data",
+      "sortOrder": 90,
+      "question": "Is data encrypted on company devices and in storage?",
+      "answer": {
+        "type": "enum",
+        "options": [
+          { "value": "none", "label": "No" },
+          { "value": "servers_only", "label": "Servers or cloud storage only" },
+          { "value": "laptops_only", "label": "Laptops only" },
+          { "value": "full", "label": "Laptops, servers and cloud storage, centrally verified" }
+        ]
+      },
+      "rules": [
+        { "when": { "op": "in", "value": ["full"] }, "status": "pass" },
+        { "when": { "op": "in", "value": ["servers_only", "laptops_only"] }, "status": "partial" },
+        { "when": { "op": "always" }, "status": "fail" }
+      ],
+      "gap": {
+        "fail": {
+          "consequence": "A laptop left in a taxi is a reportable data breach. With encryption on, the same laptop is just a lost piece of hardware — most privacy regulations treat encrypted data as not breached at all. Without it you are looking at notifying every affected customer, a possible fine, and a claim on a policy that may well require encryption as a condition.",
+          "fix": "Turn on built-in disk encryption for every laptop and server. It is included in the operating system you already own, and it is one of the cheapest controls available."
+        },
+        "partial": {
+          "consequence": "The devices most likely to be lost or stolen are the ones you carry out of the building, so protecting only part of your estate leaves the highest-risk part exposed. A breach involving any unencrypted device triggers the same notification obligations as if nothing were encrypted.",
+          "fix": "Extend encryption across the remaining devices and confirm centrally that it is switched on, rather than assuming it is."
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+name: Deploy
+
+# Deploys the published image to your server.
+#
+# Run it from the Actions tab: "Deploy" -> "Run workflow". Nothing deploys on
+# its own, so a push can never surprise you mid-demo.
+#
+# Requires four repository secrets (Settings -> Secrets and variables ->
+# Actions), all documented in DEPLOY.md:
+#   SSH_HOST         your server's address
+#   SSH_USER         the login, usually root
+#   SSH_PRIVATE_KEY  the private half of the key you put on the server
+#   ENV_FILE         the full contents of the server's .env
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to deploy. Leave blank to deploy the branch you selected above.'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open an SSH session to the server
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Copy the compose files across
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p /opt/readiness && install -d -o 1000 -g 1000 /opt/readiness/backups"
+          scp -i ~/.ssh/id_ed25519 docker-compose.yml Caddyfile \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/readiness/"
+
+      - name: Write the environment file
+        run: |
+          printf '%s\n' "${{ secrets.ENV_FILE }}" | \
+            ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "install -m 600 /dev/stdin /opt/readiness/.env"
+
+      - name: Back up before changing anything
+        # A deploy is the most likely moment to want yesterday's data back.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cd /opt/readiness && docker compose exec -T app npm run backup || echo 'no running app to back up (first deploy)'"
+
+      - name: Work out which image to deploy
+        # Blank means "the branch selected in the Run workflow box", which is
+        # what someone deploying their own branch almost always intends.
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '-' | sed 's/-*$//')
+          fi
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:$TAG" >> $GITHUB_ENV
+          echo "deploying $TAG"
+
+      - name: Let the server pull from the registry
+        # Published images are private to the repository. This hands the server
+        # a short-lived token for this deploy only, so no long-lived registry
+        # credential has to live on the box.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin" <<< "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Pull and restart
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cd /opt/readiness && READINESS_IMAGE=$IMAGE docker compose pull && READINESS_IMAGE=$IMAGE docker compose up -d"
+
+
+      - name: Log the server out of the registry
+        if: always()
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "docker logout ghcr.io" || true
+
+      - name: Verify the live site answers
+        # Checks the real public URL, not the container. A deploy that leaves the
+        # site down is a failed deploy, and this is what says so.
+        run: |
+          # tr strips a stray carriage return from a secret pasted on Windows,
+          # which would otherwise produce a baffling "URL not found" here.
+          URL=$(printf '%s\n' "${{ secrets.ENV_FILE }}" | grep '^PUBLIC_URL=' | cut -d= -f2- | tr -d ' \r\n')
+          if [ -z "$URL" ]; then
+            echo "PUBLIC_URL is missing from the ENV_FILE secret — cannot verify the site"; exit 1
+          fi
+          echo "checking $URL/health"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/health" > /tmp/health.json; then
+              cat /tmp/health.json; echo; echo "live at $URL"; exit 0
+            fi
+            sleep 2
+          done
+          echo "the site did not come back up"; exit 1

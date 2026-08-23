@@ -1,0 +1,10 @@
+node_modules
+data
+backups
+packs
+.git
+.github
+*.log
+.env
+README.md
+DEPLOY.md

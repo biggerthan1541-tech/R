@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  image:
+    name: Build and publish the container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        # Builds on every branch, so a broken Dockerfile fails here rather than
+        # on the server. The PDF renderer needs Chromium in the image, which is
+        # the part most likely to break silently.
+        run: docker build -t readiness:ci .
+
+      - name: Prove the container starts and answers its health check
+        run: |
+          docker run -d --name readiness-ci \
+            -e SESSION_SECRET=ci-only-secret-that-is-long-enough-for-checks \
+            -e PUBLIC_URL=https://ci.invalid \
+            -e REQUIRE_HTTPS=false \
+            -p 3000:3000 readiness:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health > /tmp/health.json; then
+              echo "healthy after ${i}s:"; cat /tmp/health.json; exit 0
+            fi
+            sleep 1
+          done
+          echo "the container never became healthy"; docker logs readiness-ci; exit 1
+
+      - name: Prove Chromium can render a PDF inside the image
+        # Without this, PDF export fails only when a customer clicks the button.
+        run: |
+          docker exec readiness-ci node -e "
+            import('/app/src/render/pdf.ts').then(async (pdf) => {
+              const browser = pdf.findBrowser();
+              if (!browser) { console.error('no browser in the image'); process.exit(1); }
+              const bytes = await pdf.renderPdf('<h1>render check</h1>');
+              if (bytes.subarray(0,5).toString() !== '%PDF-') { console.error('not a pdf'); process.exit(1); }
+              console.log('chromium ok:', browser, bytes.length, 'bytes');
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+      - name: Prove tsx is in the image rather than fetched at start
+        # `npx tsx` would silently download from npm on every boot, so the app
+        # would fail to start on a host with restricted egress -- or during a
+        # demo, if npm happened to be having a bad day.
+        run: |
+          docker exec readiness-ci test -x node_modules/.bin/tsx
+          docker exec readiness-ci node -e "
+            const v = require('/app/node_modules/tsx/package.json').version;
+            console.log('tsx bundled in the image:', v);
+          "
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f readiness-ci || true
+
+      - name: Prove client data survives a redeploy
+        # The claim that matters most: replacing the container must not touch the
+        # database. This uses the same named-volume mechanism the server does --
+        # write data with one container, destroy it entirely, start a different
+        # one on the same volume, and read the data back.
+        run: |
+          docker volume create readiness-persist >/dev/null
+
+          echo "--- deployment 1: create a tenant, a client and its evidence ---"
+          docker run --rm -v readiness-persist:/data readiness:ci \
+            node_modules/.bin/tsx src/cli.ts demo | tail -4
+
+          echo "--- container destroyed; starting a different one on the same volume ---"
+          docker run --rm -v readiness-persist:/data readiness:ci node -e "
+            import('/app/src/db/connection.ts').then(async (m) => {
+              const db = m.openDatabase();
+              const clients = db.prepare('SELECT name FROM clients').all();
+              const evidence = db.prepare('SELECT COUNT(*) AS n FROM evidence_records').get();
+              console.log('clients after redeploy:', JSON.stringify(clients));
+              console.log('evidence records after redeploy:', evidence.n);
+              if (clients.length === 0) { console.error('DATA LOST ACROSS REDEPLOY'); process.exit(1); }
+              if (evidence.n === 0) { console.error('EVIDENCE LOST ACROSS REDEPLOY'); process.exit(1); }
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+          echo "--- a backup lands on the HOST filesystem, ready to copy away ---"
+          # This is the arrangement compose uses: /backups is a bind mount, not
+          # part of the volume, so the file is reachable by scp. A backup that
+          # only exists inside the volume dies with the volume.
+          mkdir -p "$PWD/host-backups" && chmod 777 "$PWD/host-backups"
+          docker run --rm -v readiness-persist:/data -v "$PWD/host-backups:/backups" \
+            -e BACKUP_DIR=/backups readiness:ci node_modules/.bin/tsx src/cli.ts backup | head -2
+
+          ls -la host-backups/
+          test -n "$(ls host-backups/*.db 2>/dev/null)" || { echo "no backup on the host"; exit 1; }
+
+          echo "--- and that file restores onto an empty volume ---"
+          docker volume create readiness-rebuilt >/dev/null
+          BACKUP=$(basename "$(ls host-backups/*.db | head -1)")
+          docker run --rm -v readiness-rebuilt:/data -v "$PWD/host-backups:/backups" \
+            readiness:ci node_modules/.bin/tsx src/cli.ts restore "/backups/$BACKUP" | head -2
+
+          docker run --rm -v readiness-rebuilt:/data readiness:ci node -e "
+            import('/app/src/db/connection.ts').then(async (m) => {
+              const db = m.openDatabase();
+              const clients = db.prepare('SELECT name FROM clients').all();
+              console.log('clients on the rebuilt volume:', JSON.stringify(clients));
+              if (clients.length === 0) { console.error('RESTORE PRODUCED NOTHING'); process.exit(1); }
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+          docker volume rm readiness-persist readiness-rebuilt >/dev/null
+
+      - name: Log in to the registry
+        # Pull requests from forks get no token, and publishing an unreviewed
+        # fork build would be a supply-chain hole. Branch pushes only.
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        if: github.event_name != 'pull_request'
+        run: |
+          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}
+          # Every branch gets its own tag, so a deploy can name exactly what it
+          # wants. "latest" follows the repository's default branch only.
+          SLUG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '-' | sed 's/-*$//')
+          docker tag readiness:ci $IMAGE:$SLUG
+          docker tag readiness:ci $IMAGE:${GITHUB_SHA::12}
+          docker push $IMAGE:$SLUG
+          docker push $IMAGE:${GITHUB_SHA::12}
+
+          if [ "${GITHUB_REF_NAME}" = "${{ github.event.repository.default_branch }}" ]; then
+            docker tag readiness:ci $IMAGE:latest
+            docker push $IMAGE:latest
+          fi
+
+          echo "### Deployable image tags" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$SLUG" >> $GITHUB_STEP_SUMMARY
+          echo "${GITHUB_SHA::12}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

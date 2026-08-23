@@ -1,0 +1,36 @@
+{
+  "$comment": "Roles and permissions. Edit this file to add a role or change what one can do; no code changes are required. src/domain/roles.ts validates it at startup and is the only thing that reads it. Permission checks are declarative: a role holds a list of permission keys, optionally with a ':*' suffix to grant a whole group, or '*' for everything.",
+  "permissions": [
+    { "key": "client:read", "description": "View clients, their controls and their evidence history" },
+    { "key": "client:create", "description": "Add a new client" },
+    { "key": "client:configure", "description": "Change which requirement profiles a client is assessed against" },
+    { "key": "evidence:write", "description": "Record a control's state against a client" },
+    { "key": "pack:read", "description": "View generated evidence packs" },
+    { "key": "pack:generate", "description": "Generate a new evidence pack" },
+    { "key": "portal:share", "description": "Create a read-only client portal link" },
+    { "key": "portal:revoke", "description": "Revoke a client portal link" },
+    { "key": "user:read", "description": "See who has access to this MSP" },
+    { "key": "user:manage", "description": "Invite, edit and disable users" },
+    { "key": "audit:read", "description": "Read the operator audit log" }
+  ],
+  "roles": [
+    {
+      "key": "owner",
+      "label": "Owner",
+      "description": "Runs the MSP. Full access, including managing who else has access.",
+      "permissions": ["*"]
+    },
+    {
+      "key": "operator",
+      "label": "Operator",
+      "description": "Day-to-day technician. Manages clients and evidence, but cannot change who has access.",
+      "permissions": ["client:*", "evidence:write", "pack:*", "portal:*", "user:read", "audit:read"]
+    },
+    {
+      "key": "read_only",
+      "label": "Read only",
+      "description": "Can see everything and change nothing. For account managers and auditors.",
+      "permissions": ["client:read", "pack:read", "user:read", "audit:read"]
+    }
+  ]
+}

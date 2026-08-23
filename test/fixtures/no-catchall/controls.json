@@ -1,0 +1,9 @@
+{
+  "controls": [{
+    "key": "broken", "title": "Broken", "category": "Test", "sortOrder": 0,
+    "question": "Yes?",
+    "answer": { "type": "enum", "options": [{ "value": "y", "label": "Yes" }] },
+    "rules": [{ "when": { "op": "eq", "value": "y" }, "status": "pass" }],
+    "gap": {}
+  }]
+}

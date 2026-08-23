@@ -1,0 +1,25 @@
+# Terminates HTTPS and passes requests to the app.
+#
+# Caddy obtains a certificate from Let's Encrypt on first start and renews it
+# automatically. Nothing here needs touching once the domain is pointed at the
+# server — which removes the most common cause of a small site going dark.
+
+{$READINESS_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy app:3000 {
+		# The app is behind this proxy, so it cannot see the client's real
+		# scheme or address. These headers are how it knows the request
+		# arrived over https and who sent it.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		header_up Host {host}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

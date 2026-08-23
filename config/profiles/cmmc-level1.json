@@ -1,0 +1,17 @@
+{
+  "key": "cmmc_level_1",
+  "name": "CMMC Level 1",
+  "publisher": "US Department of Defense",
+  "version": "2.0",
+  "description": "Basic safeguarding of Federal Contract Information. Required of any contractor handling FCI; self-assessed and annually affirmed.",
+  "items": [
+    { "control": "access_offboarding", "weight": 20, "requirement": "mandatory", "note": "AC.L1-3.1.1 / AC.L1-3.1.2 — limit system access to authorised users." },
+    { "control": "mfa_coverage", "weight": 18, "requirement": "mandatory", "note": "IA.L1-3.5.1 / IA.L1-3.5.2 — identify and authenticate users." },
+    { "control": "edr_deployment", "weight": 16, "requirement": "mandatory", "note": "SI.L1-3.14.2 — malicious code protection." },
+    { "control": "patch_management", "weight": 16, "requirement": "mandatory", "note": "SI.L1-3.14.1 — correct flaws in a timely manner." },
+    { "control": "encryption", "weight": 12, "requirement": "recommended", "note": "SC.L1-3.13.1 — protect information at boundaries." },
+    { "control": "tested_backups", "weight": 8, "requirement": "recommended" },
+    { "control": "security_awareness_training", "weight": 5, "requirement": "recommended" },
+    { "control": "incident_response_plan", "weight": 5, "requirement": "recommended" }
+  ]
+}
