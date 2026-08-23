@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  image:
+    name: Build and publish the container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        # Builds on every branch, so a broken Dockerfile fails here rather than
+        # on the server. The PDF renderer needs Chromium in the image, which is
+        # the part most likely to break silently.
+        run: docker build -t readiness:ci .
+
+      - name: Prove the container starts and answers its health check
+        run: |
+          docker run -d --name readiness-ci \
+            -e SESSION_SECRET=ci-only-secret-that-is-long-enough-for-checks \
+            -e PUBLIC_URL=https://ci.invalid \
+            -e REQUIRE_HTTPS=false \
+            -p 3000:3000 readiness:ci
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health > /tmp/health.json; then
+              echo "healthy after ${i}s:"; cat /tmp/health.json; exit 0
+            fi
+            sleep 1
+          done
+          echo "the container never became healthy"; docker logs readiness-ci; exit 1
+
+      - name: Prove Chromium can render a PDF inside the image
+        # Without this, PDF export fails only when a customer clicks the button.
+        run: |
+          docker exec readiness-ci node -e "
+            import('/app/src/render/pdf.ts').then(async (pdf) => {
+              const browser = pdf.findBrowser();
+              if (!browser) { console.error('no browser in the image'); process.exit(1); }
+              const bytes = await pdf.renderPdf('<h1>render check</h1>');
+              if (bytes.subarray(0,5).toString() !== '%PDF-') { console.error('not a pdf'); process.exit(1); }
+              console.log('chromium ok:', browser, bytes.length, 'bytes');
+            }).catch((e) => { console.error(e); process.exit(1); });
+          "
+
+      - name: Stop the container
+        if: always()
+        run: docker rm -f readiness-ci || true
+
+      - name: Log in to the registry
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        run: |
+          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}
+          docker tag readiness:ci $IMAGE:latest
+          docker tag readiness:ci $IMAGE:${GITHUB_SHA::12}
+          docker push $IMAGE:latest
+          docker push $IMAGE:${GITHUB_SHA::12}
+          echo "published $IMAGE:${GITHUB_SHA::12}"

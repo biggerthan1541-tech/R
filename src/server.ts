@@ -3,6 +3,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import { pathToFileURL } from 'node:url';
 import { readEnv, type Env } from './config/env.ts';
 import { db as sharedDb, type Db } from './db/connection.ts';
+import { currentVersion } from './db/migrate.ts';
 import { forTenant, lookupTenantForLogin, type NewEvidence, type TenantDb, type UserRow } from './db/tenant.ts';
 import { listControls, listProfiles, syncConfig } from './domain/config-loader.ts';
 import { evaluateControl } from './domain/evaluate.ts';
@@ -57,11 +58,50 @@ const OWNER_ROLE = 'owner';
 export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
   // Portal tokens travel as a route parameter and are ~110 characters signed,
   // well past Fastify's 100-character default.
-  const app = Fastify({ logger: false, bodyLimit: BODY_LIMIT, maxParamLength: 512 });
+  const app = Fastify({
+    logger: false,
+    bodyLimit: BODY_LIMIT,
+    maxParamLength: 512,
+    // Behind Caddy, the connection to this process is plain http; the client's
+    // real scheme arrives in x-forwarded-proto. Without this, request.protocol
+    // reports "http" and every client portal link is generated insecure.
+    trustProxy: true,
+  });
   app.register(formbody, { bodyLimit: BODY_LIMIT });
   registerSecurity(app, { secret: env.sessionSecret, secureCookies: env.secureCookies });
 
   const cookieOptions = { secret: env.sessionSecret, secureCookies: env.secureCookies };
+
+  /**
+   * Liveness and readiness in one. Deliberately unauthenticated -- a load
+   * balancer cannot log in -- and deliberately free of tenant data: it reports
+   * that the process is up and the database answers, and nothing about who is
+   * on it.
+   */
+  app.get('/health', async (_request, reply) => {
+    try {
+      const version = currentVersion(db);
+      reply
+        .header('cache-control', 'no-store')
+        .send({ status: 'ok', schema: version, uptime: Math.round(process.uptime()) });
+    } catch (error) {
+      reply.code(503).header('cache-control', 'no-store').send({
+        status: 'unavailable',
+        reason: (error as Error).message,
+      });
+    }
+  });
+
+  if (env.requireHttps) {
+    app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+      // The health check is polled over plain http from inside the machine.
+      if (request.url === '/health') return;
+      if (request.protocol === 'https') return;
+
+      const target = `${env.publicUrl ?? `https://${request.headers.host ?? ''}`}${request.url}`;
+      reply.code(308).header('location', target).send();
+    });
+  }
 
   app.decorateRequest('actor', null);
   app.addHook('preHandler', async (request: FastifyRequest) => {
@@ -466,7 +506,7 @@ export function buildServer(db: Db = sharedDb(), env: Env = readEnv()) {
 
     audit(actor, 'portal.share', 'portal_link', linkId, { client: id, pack: packId, expiresAt });
 
-    const url = `${originOf(request)}/portal/${token}`;
+    const url = `${originOf(request, env)}/portal/${token}`;
     reply.redirect(
       `/clients/${id}?portalUrl=${encodeURIComponent(url)}&portalExpires=${encodeURIComponent(expiresAt)}`,
     );
@@ -738,10 +778,16 @@ function clientSummaries(db: Db, tenant: TenantDb): ClientSummary[] {
   return summaries.sort((a, b) => (a.score ?? -1) - (b.score ?? -1) || a.client.name.localeCompare(b.client.name));
 }
 
-function originOf(request: FastifyRequest): string {
-  const host = request.headers.host ?? 'localhost:3000';
-  const proto = (request.headers['x-forwarded-proto'] as string | undefined) ?? request.protocol;
-  return `${proto}://${host}`;
+/**
+ * Where a client portal link points.
+ *
+ * In production this is PUBLIC_URL, never the request's Host header: a link is
+ * an absolute URL that leaves the building, and letting a header decide its
+ * destination is how a shared link ends up pointing at someone else's server.
+ */
+function originOf(request: FastifyRequest, env: Env): string {
+  if (env.publicUrl) return env.publicUrl;
+  return `${request.protocol}://${request.headers.host ?? `localhost:${env.port}`}`;
 }
 
 /**
@@ -813,7 +859,7 @@ if (isEntrypoint) {
   syncConfig(db);
   buildServer(db, env)
     .listen({ port: env.port, host: '0.0.0.0' })
-    .then(() => console.log(`Readiness running at http://localhost:${env.port}`))
+    .then(() => console.log(`Readiness listening on :${env.port} — ${env.publicUrl ?? `http://localhost:${env.port}`}`))
     .catch((error) => {
       console.error(error.message);
       process.exit(1);

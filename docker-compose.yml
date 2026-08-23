@@ -1,0 +1,58 @@
+# Readiness — one small server, one database file, automatic HTTPS.
+#
+# Deliberately a single app container. SQLite is one file and two processes
+# writing to it will corrupt your data, so this must never be scaled to more
+# than one replica. When you outgrow that, the schema moves to Postgres
+# unchanged.
+#
+#   docker compose up -d          start (or apply a change)
+#   docker compose logs -f app    watch what it is doing
+#   docker compose pull && docker compose up -d    update to the latest build
+
+services:
+  app:
+    image: ${READINESS_IMAGE:-ghcr.io/biggerthan1541-tech/r:latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_FILE: /data/readiness.db
+      BACKUP_DIR: /data/backups
+      # From the .env file sitting next to this one.
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
+      SIGNUP_INVITE_CODE: ${SIGNUP_INVITE_CODE:-}
+    volumes:
+      # The database. This is the line that decides whether your client data
+      # survives a redeploy: the volume is storage that exists independently of
+      # the container, so replacing the container leaves it untouched.
+      - readiness-data:/data
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddy gets and renews the certificate for this name automatically.
+      READINESS_DOMAIN: ${READINESS_DOMAIN:?set READINESS_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # issued certificates — losing these means re-issuing
+      - caddy-config:/config
+
+volumes:
+  readiness-data:
+  caddy-data:
+  caddy-config:

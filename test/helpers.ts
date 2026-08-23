@@ -11,6 +11,8 @@ export const TEST_ENV: Env = {
   secureCookies: false,
   nodeEnv: 'test',
   signupInviteCode: null,
+  publicUrl: null,
+  requireHttps: false,
 };
 
 export function testDb(): Db {

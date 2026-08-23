@@ -1,0 +1,71 @@
+name: Deploy
+
+# Deploys the published image to your server.
+#
+# Run it from the Actions tab: "Deploy" -> "Run workflow". Nothing deploys on
+# its own, so a push can never surprise you mid-demo.
+#
+# Requires four repository secrets (Settings -> Secrets and variables ->
+# Actions), all documented in DEPLOY.md:
+#   SSH_HOST         your server's address
+#   SSH_USER         the login, usually root
+#   SSH_PRIVATE_KEY  the private half of the key you put on the server
+#   ENV_FILE         the full contents of the server's .env
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to deploy (latest, or a 12-character commit id)'
+        required: false
+        default: 'latest'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open an SSH session to the server
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Copy the compose files across
+        run: |
+          scp -i ~/.ssh/id_ed25519 docker-compose.yml Caddyfile \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/readiness/"
+
+      - name: Write the environment file
+        run: |
+          printf '%s\n' "${{ secrets.ENV_FILE }}" | \
+            ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "install -m 600 /dev/stdin /opt/readiness/.env"
+
+      - name: Back up before changing anything
+        # A deploy is the most likely moment to want yesterday's data back.
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cd /opt/readiness && docker compose exec -T app npm run backup || echo 'no running app to back up (first deploy)'"
+
+      - name: Pull and restart
+        run: |
+          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${{ inputs.tag }}
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "cd /opt/readiness && READINESS_IMAGE=$IMAGE docker compose pull && READINESS_IMAGE=$IMAGE docker compose up -d"
+
+      - name: Verify the live site answers
+        # Checks the real public URL, not the container. A deploy that leaves the
+        # site down is a failed deploy, and this is what says so.
+        run: |
+          URL=$(printf '%s\n' "${{ secrets.ENV_FILE }}" | grep '^PUBLIC_URL=' | cut -d= -f2-)
+          echo "checking $URL/health"
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/health" > /tmp/health.json; then
+              cat /tmp/health.json; echo; echo "live at $URL"; exit 0
+            fi
+            sleep 2
+          done
+          echo "the site did not come back up"; exit 1

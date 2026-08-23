@@ -11,6 +11,8 @@
     "setup": "tsx src/cli.ts setup",
     "seed": "tsx src/cli.ts seed",
     "demo": "tsx src/cli.ts demo",
+    "backup": "tsx src/cli.ts backup",
+    "restore": "tsx src/cli.ts restore",
     "reset": "tsx src/cli.ts reset",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts"

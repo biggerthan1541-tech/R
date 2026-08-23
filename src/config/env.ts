@@ -17,6 +17,17 @@ export type Env = {
   nodeEnv: string;
   /** When set, self-serve signup requires this code. Unset means open signup. */
   signupInviteCode: string | null;
+  /**
+   * Canonical https origin, e.g. https://readiness.example.com.
+   *
+   * Client portal links are absolute URLs that get emailed and pasted around.
+   * Building them from the incoming Host header would let anyone who can reach
+   * the server mint a link pointing wherever they like, so in production the
+   * origin is configuration, not user input.
+   */
+  publicUrl: string | null;
+  /** Redirect http to https and refuse to issue insecure links. */
+  requireHttps: boolean;
 };
 
 const MIN_SECRET_LENGTH = 32;
@@ -55,6 +66,20 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
 
   const nodeEnv = source.NODE_ENV ?? 'development';
+  const production = nodeEnv === 'production';
+
+  const publicUrl = source.PUBLIC_URL?.trim().replace(/\/+$/, '') || null;
+  if (publicUrl && !/^https?:\/\/[^\s/]+$/.test(publicUrl)) {
+    throw new Error(`PUBLIC_URL must be a bare origin like https://readiness.example.com (got "${publicUrl}").`);
+  }
+  if (production && !publicUrl) {
+    throw new Error(
+      'PUBLIC_URL is required in production — client portal links are absolute URLs and must not\n' +
+        'be built from a request header. Set it to your https origin, e.g.\n' +
+        '  PUBLIC_URL=https://readiness.example.com',
+    );
+  }
+
   return {
     sessionSecret,
     port: Number(source.PORT ?? 3000),
@@ -63,5 +88,7 @@ export function readEnv(source: NodeJS.ProcessEnv = process.env): Env {
     secureCookies: source.SECURE_COOKIES ? source.SECURE_COOKIES === 'true' : nodeEnv === 'production',
     nodeEnv,
     signupInviteCode: source.SIGNUP_INVITE_CODE?.trim() || null,
+    publicUrl,
+    requireHttps: source.REQUIRE_HTTPS ? source.REQUIRE_HTTPS === 'true' : production,
   };
 }

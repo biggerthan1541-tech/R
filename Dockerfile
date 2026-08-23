@@ -1,0 +1,50 @@
+# Readiness — production image.
+#
+# No build step: the app runs TypeScript directly through tsx, exactly as it
+# does in development. This image exists to pin Node and Chromium and to carry
+# the dependencies, not to compile anything.
+
+FROM node:22-bookworm-slim
+
+# Chromium renders evidence packs as PDFs. It is the single largest thing in
+# this image; without it the app still runs and the PDF download returns a
+# clear message instead of failing obscurely.
+# tini reaps zombie Chromium processes, which otherwise accumulate.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      chromium \
+      ca-certificates \
+      fonts-liberation \
+      tini \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CHROME_PATH=/usr/bin/chromium \
+    NODE_ENV=production \
+    DATABASE_FILE=/data/readiness.db \
+    BACKUP_DIR=/data/backups \
+    PORT=3000
+
+WORKDIR /app
+
+# Dependencies first: this layer is cached until package.json changes, so an
+# ordinary code change redeploys without recompiling better-sqlite3.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
+
+COPY . .
+
+# The database and backups live on a mounted volume, never in the image.
+# Anything written here without a volume is lost on the next deploy.
+VOLUME ["/data"]
+
+# Run unprivileged. The node user ships with the base image.
+RUN mkdir -p /data && chown -R node:node /data /app
+USER node
+
+EXPOSE 3000
+
+# Compose and the host both poll this; it also gates a rolling restart.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["npx", "tsx", "src/server.ts"]

@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { db as sharedDb, projectRoot, type Db } from './db/connection.ts';
 import { ensureMsp } from './db/msps.ts';
 import { forTenant, lookupTenantForLogin, type TenantDb } from './db/tenant.ts';
+import { backupPath, backupTo, describeBackup, restoreFrom } from './db/backup.ts';
 import { hashPassword } from './auth/passwords.ts';
 import { loadRoles } from './domain/roles.ts';
 import { getControl, listControls, syncConfig } from './domain/config-loader.ts';
@@ -171,6 +172,27 @@ function setup(): void {
   console.log('Wrote .env with a freshly generated SESSION_SECRET.');
 }
 
+async function backup(): Promise<void> {
+  const dir = process.env.BACKUP_DIR ?? join(projectRoot, 'backups');
+  const result = await backupTo(backupPath(dir));
+  console.log(`Backed up to ${result.file}`);
+  console.log(`  ${describeBackup(result)}`);
+  console.log('\nCopy it somewhere else — a backup on the same disk as the database');
+  console.log('does not survive losing that disk.');
+}
+
+function restore(file: string | undefined): void {
+  if (!file) {
+    console.error('Usage: npm run restore -- <path-to-backup.db>');
+    process.exit(1);
+  }
+  const { restored, movedAside } = restoreFrom(file);
+  console.log(`Restored ${file}`);
+  console.log(`  -> ${restored}`);
+  if (movedAside) console.log(`  previous database kept at ${movedAside}`);
+  console.log('\nStart the app again to pick it up.');
+}
+
 function reset(): void {
   for (const suffix of ['', '-shm', '-wal']) {
     rmSync(join(projectRoot, 'data', `readiness.db${suffix}`), { force: true });
@@ -193,11 +215,17 @@ if (isEntrypoint) {
       case 'demo':
         await demo(sharedDb());
         break;
+      case 'backup':
+        await backup();
+        break;
+      case 'restore':
+        restore(process.argv[3]);
+        break;
       case 'reset':
         reset();
         break;
       default:
-        console.error('Usage: tsx src/cli.ts <setup|seed|demo|reset>');
+        console.error('Usage: tsx src/cli.ts <setup|seed|demo|backup|restore <file>|reset>');
         process.exit(1);
     }
   })();
