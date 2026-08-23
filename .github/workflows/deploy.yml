@@ -16,9 +16,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag to deploy (latest, or a 12-character commit id)'
+        description: 'Image tag to deploy. Leave blank to deploy the branch you selected above.'
         required: false
-        default: 'latest'
+        default: ''
 
 jobs:
   deploy:
@@ -50,11 +50,22 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "cd /opt/readiness && docker compose exec -T app npm run backup || echo 'no running app to back up (first deploy)'"
 
+      - name: Work out which image to deploy
+        # Blank means "the branch selected in the Run workflow box", which is
+        # what someone deploying their own branch almost always intends.
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._-' '-' | sed 's/-*$//')
+          fi
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:$TAG" >> $GITHUB_ENV
+          echo "deploying $TAG"
+
       - name: Pull and restart
         run: |
-          IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}:${{ inputs.tag }}
           ssh -i ~/.ssh/id_ed25519 "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "cd /opt/readiness && READINESS_IMAGE=$IMAGE docker compose pull && READINESS_IMAGE=$IMAGE docker compose up -d"
+
 
       - name: Verify the live site answers
         # Checks the real public URL, not the container. A deploy that leaves the

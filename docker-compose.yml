@@ -11,7 +11,7 @@
 
 services:
   app:
-    image: ${READINESS_IMAGE:-ghcr.io/biggerthan1541-tech/r:latest}
+    image: ${READINESS_IMAGE:?set by the Deploy workflow}
     restart: unless-stopped
     environment:
       NODE_ENV: production
