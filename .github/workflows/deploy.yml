@@ -90,7 +90,12 @@ jobs:
         # Checks the real public URL, not the container. A deploy that leaves the
         # site down is a failed deploy, and this is what says so.
         run: |
-          URL=$(printf '%s\n' "${{ secrets.ENV_FILE }}" | grep '^PUBLIC_URL=' | cut -d= -f2-)
+          # tr strips a stray carriage return from a secret pasted on Windows,
+          # which would otherwise produce a baffling "URL not found" here.
+          URL=$(printf '%s\n' "${{ secrets.ENV_FILE }}" | grep '^PUBLIC_URL=' | cut -d= -f2- | tr -d ' \r\n')
+          if [ -z "$URL" ]; then
+            echo "PUBLIC_URL is missing from the ENV_FILE secret — cannot verify the site"; exit 1
+          fi
           echo "checking $URL/health"
           for i in $(seq 1 30); do
             if curl -fsS "$URL/health" > /tmp/health.json; then
