@@ -127,8 +127,13 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md                        ← this file
+└── pilots/
+    └── msp-design-partner/          ← 4-week MSP design-partner pilot
+        ├── README.md                ← the kit: recruiting, runbook, signals, follow-ups
+        ├── outreach-tracker.md      ← who was contacted and what came back
+        ├── diagnostic-call-notes.md ← per-MSP call template (copy per partner)
+        └── signal-log.md            ← behavior record the week-4 decision reads from
 ```
 
 ---
