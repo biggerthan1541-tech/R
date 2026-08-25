@@ -6,8 +6,10 @@ import { daysBetween, relativeDays, today } from "./dates";
 import { decideNag, nagSubject } from "./nag";
 import { deriveStatus } from "./status";
 import { EXCEPTION_TYPE_LABELS, RISK_LEVEL_LABELS } from "./labels";
+import { appUrl } from "./urls";
 import { sendEmail, sendSlack } from "./notify";
 import { recordEvent } from "./exceptions";
+import { actionLinkFor } from "./action-tokens";
 
 export type SweepResult = {
   date: string;
@@ -96,12 +98,16 @@ async function nagIfDue(workspace: Workspace, ex: Exception, now: string): Promi
   const recipients = [...new Set([ex.riskOwnerEmail, ex.approverEmail])].filter(Boolean);
 
   if (workspace.nagEmailEnabled) {
-    await sendEmail({
-      to: recipients,
-      subject,
-      html: nagHtml(workspace, ex, days),
-      text: nagText(workspace, ex, days),
-    });
+    // One email each: the link is a per-recipient bearer token, never shared.
+    for (const to of recipients) {
+      const link = await actionLinkFor(ex, to);
+      await sendEmail({
+        to: [to],
+        subject,
+        html: nagHtml(workspace, ex, days, link),
+        text: nagText(workspace, ex, days, link),
+      });
+    }
   }
   if (workspace.nagSlackEnabled && workspace.slackWebhookUrl) {
     await sendSlack(workspace.slackWebhookUrl, slackText(workspace, ex, days));
@@ -121,18 +127,13 @@ async function nagIfDue(workspace: Workspace, ex: Exception, now: string): Promi
 /* Message bodies                                                             */
 /* -------------------------------------------------------------------------- */
 
-function appUrl(workspace: Workspace, ex: Exception): string {
-  const base = (process.env.AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  return `${base}/w/${workspace.slug}/exceptions/${ex.id}`;
-}
-
 function lede(ex: Exception, days: number): string {
   if (days < 0) return `expired ${relativeDays(days)} and is still open`;
   if (days === 0) return "expires today";
   return `expires ${relativeDays(days)}`;
 }
 
-export function nagText(workspace: Workspace, ex: Exception, days: number): string {
+export function nagText(workspace: Workspace, ex: Exception, days: number, link: string): string {
   return [
     `"${ex.title}" ${lede(ex, days)}.`,
     "",
@@ -143,26 +144,26 @@ export function nagText(workspace: Workspace, ex: Exception, days: number): stri
     `Approver:              ${ex.approverName} <${ex.approverEmail}>`,
     `Compensating control:  ${ex.compensatingControl || "—"}`,
     "",
-    "Renew it, extend it, or close it:",
-    appUrl(workspace, ex),
+    "Open it — the link signs you in, no password needed:",
+    link,
     "",
     `— Lapse, the exception register for ${workspace.name}`,
   ].join("\n");
 }
 
-export function nagHtml(workspace: Workspace, ex: Exception, days: number): string {
+export function nagHtml(workspace: Workspace, ex: Exception, days: number, link: string): string {
   const urgent = days <= 0;
-  const accent = urgent ? "#b91c1c" : "#b45309";
+  const accent = urgent ? "#ae1800" : "#7a5200";
   const row = (label: string, value: string) =>
-    `<tr><td style="padding:5px 16px 5px 0;color:#6b7280;font-size:13px;white-space:nowrap">${label}</td>` +
-    `<td style="padding:5px 0;color:#111827;font-size:13px">${escapeHtml(value)}</td></tr>`;
+    `<tr><td style="padding:5px 16px 5px 0;color:#7d7979;font-size:13px;white-space:nowrap">${label}</td>` +
+    `<td style="padding:5px 0;color:#201e1d;font-size:13px">${escapeHtml(value)}</td></tr>`;
 
-  return `<div style="font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#111827">
+  return `<div style="font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;color:#201e1d">
   <p style="margin:0 0 20px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${accent}">
     ${urgent ? "Action overdue" : "Expiring soon"}
   </p>
   <p style="margin:0 0 8px;font-size:19px;font-weight:700;line-height:1.35">${escapeHtml(ex.title)}</p>
-  <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#374151">
+  <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#444141">
     This exception <strong style="color:${accent}">${lede(ex, days)}</strong>.
     It stays on the register — and in the auditor export — until someone renews, extends or closes it.
   </p>
@@ -175,9 +176,12 @@ export function nagHtml(workspace: Workspace, ex: Exception, days: number): stri
     ${row("Compensating control", ex.compensatingControl || "—")}
   </table>
   <p style="margin:0 0 28px">
-    <a href="${appUrl(workspace, ex)}" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:600;font-size:14px">Review this exception</a>
+    <a href="${link}" style="display:inline-block;background:#ec3013;color:#f3f2f2;text-decoration:none;padding:11px 18px;font-weight:800;font-size:14px">Review this exception</a>
   </p>
-  <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6">
+  <p style="margin:0 0 22px;color:#7d7979;font-size:12px;line-height:1.6">
+    The link signs you in — no password, no account setup.
+  </p>
+  <p style="margin:0;color:#7d7979;font-size:12px;line-height:1.6">
     Lapse — the exception register for ${escapeHtml(workspace.name)}.
   </p>
 </div>`;
@@ -188,7 +192,7 @@ export function slackText(workspace: Workspace, ex: Exception, days: number): st
   return [
     `${flag} *${ex.title}* ${lede(ex, days)}.`,
     `_${EXCEPTION_TYPE_LABELS[ex.type]} · ${RISK_LEVEL_LABELS[ex.riskLevel]} risk · owner ${ex.riskOwnerName} · approver ${ex.approverName}_`,
-    appUrl(workspace, ex),
+    appUrl(`/w/${workspace.slug}/exceptions/${ex.id}`),
   ].join("\n");
 }
 

@@ -40,6 +40,11 @@ export function ReasonAction({
 
       <div className="hair mt-2 flex flex-col gap-3 bg-surface p-3">
         <p className="m-0 text-[12px] text-neutral-700">{summary}</p>
+        {err._ && (
+          <p className="border-l-[3px] border-accent bg-accent-100 px-2.5 py-2 text-[12px] font-semibold text-accent-800">
+            {err._}
+          </p>
+        )}
         <form action={formAction} className="flex flex-col gap-3">
           {withExpiry && (
             <div>

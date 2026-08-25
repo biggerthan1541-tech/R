@@ -7,6 +7,7 @@ import { addDays, relativeDays, today } from "@/lib/dates";
 import { EVENT_KIND_LABELS, EXCEPTION_TYPE_LABELS, RISK_LEVEL_LABELS } from "@/lib/labels";
 import { STATUS_STYLES, StatusChip, Tag } from "@/components/badges";
 import { ReasonAction } from "@/components/exception-actions";
+import { can } from "@/lib/permissions";
 import {
   closeExceptionAction,
   moveExpiryAction,
@@ -22,7 +23,7 @@ export default async function ExceptionPage({
   params: Promise<{ slug: string; id: string }>;
 }) {
   const { slug, id } = await params;
-  const { workspace } = await requireWorkspace(slug);
+  const { workspace, user, role } = await requireWorkspace(slug);
   const exception = await getException(workspace.id, id);
   if (!exception) notFound();
 
@@ -31,6 +32,7 @@ export default async function ExceptionPage({
   const days = daysUntilExpiry(exception, now);
   const isClosed = Boolean(exception.closedAt);
   const nagCount = exception.events.filter((e) => e.kind === "nag_sent").length;
+  const signOff = can(isClosed ? "reopen" : "close", { email: user.email, role }, exception);
 
   async function renew(prev: FormState, formData: FormData) {
     "use server";
@@ -176,7 +178,16 @@ export default async function ExceptionPage({
       <aside className="px-6 py-6">
         <div className="kicker mb-4 text-neutral-700">Actions</div>
         <div className="mb-8 flex flex-col gap-2">
-          {isClosed ? (
+          {!signOff.allowed && (
+            <p className="hair border-l-[3px] border-accent bg-accent-100 px-3 py-2.5 text-[12px] leading-relaxed text-accent-900">
+              {signOff.reason}
+            </p>
+          )}
+          {!signOff.allowed ? (
+            <Link href={`/w/${slug}/exceptions/${id}/edit`} className="btn-secondary justify-start">
+              Edit details
+            </Link>
+          ) : isClosed ? (
             <ReasonAction
               label="Reopen"
               summary="Puts the exception back on the register with its existing expiry date."

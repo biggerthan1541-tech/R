@@ -27,8 +27,14 @@ export const EVENT_KINDS = [
   "imported",
 ] as const;
 
-export const MEMBER_ROLES = ["owner", "admin", "member"] as const;
+/**
+ * Workspace roles, most privileged first. `approver` and above may sign off on
+ * risk decisions (renew / extend / close / reopen); `member` may only record and
+ * edit. See `lib/permissions.ts` for the separation-of-duties rules.
+ */
+export const MEMBER_ROLES = ["owner", "admin", "approver", "member"] as const;
 
+export type MemberRole = (typeof MEMBER_ROLES)[number];
 export type ExceptionType = (typeof EXCEPTION_TYPES)[number];
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 export type ExceptionStatus = (typeof EXCEPTION_STATUSES)[number];

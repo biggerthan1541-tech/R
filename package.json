@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
-    "cron:local": "tsx scripts/run-cron.ts"
+    "cron:local": "tsx scripts/run-cron.ts",
+    "check-env": "tsx scripts/check-env.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

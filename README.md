@@ -23,6 +23,9 @@ what has expired, it chases the owner without you, and it prints evidence.
 | **Auditor export** | One click → a typeset **PDF** and a **CSV**, both carrying owner, approver, compensating control, expiry, current status and the full event history. |
 | **CSV import** | Upload the spreadsheet you keep today, map the columns (Lapse guesses), preview the parse, then import. A template CSV is downloadable. |
 | **Multi-tenant** | A workspace per client org. `workspace_id` on every row; every page and route resolves the workspace through a single membership-checked gate. |
+| **Self-serve onboarding** | Magic-link sign-in, create a workspace, invite teammates by email as owner / admin / approver / member. An invitation lands whether the person follows the emailed link or simply signs in with the invited address. |
+| **Separation of duties** | Whoever logs an exception can never sign off on it. Renew, extend, close and reopen require an approver or admin who is not the author — enforced server-side, on every action. |
+| **Actionable reminders** | Every nag carries a per-recipient link that signs the recipient in, joins them to the workspace at the right role, and lands them on that exception — even if they have never used Lapse. |
 
 ### Deliberately out of scope
 
@@ -41,6 +44,17 @@ billing.
 - **Vercel Cron** for the daily expiry sweep
 - **pdfkit** for the auditor PDF (Archivo embedded)
 - **Vitest** for tests
+
+---
+
+## Deploying
+
+See **[DEPLOY.md](DEPLOY.md)** for the full runbook — Neon, Resend, Vercel env
+vars, migrations, seeding, confirming the cron, and a smoke-test checklist.
+
+```bash
+npm run check-env    # verifies every required variable before you find out at 08:00
+```
 
 ---
 
@@ -95,6 +109,11 @@ LOCAL_DB_MAX_CONNECTIONS=20       # the server multiplexes PGlite's single conne
 | `CRON_SECRET` | yes | Shared secret the daily cron endpoint requires. |
 | `DRY_RUN_NOTIFICATIONS` | no | `1` prints emails/Slack messages to the console instead of sending. Implied whenever `AUTH_RESEND_KEY` is unset. |
 | `SEED_EMAIL` | no | Account the seed script grants the demo workspace to. |
+| `NEXT_PUBLIC_APP_REGION` | prod | Hosting region stated on `/security`. |
+| `NEXT_PUBLIC_DB_REGION` | prod | Database region stated on `/security`. |
+| `NEXT_PUBLIC_SECURITY_CONTACT` | prod | Address for deletion and vulnerability reports on `/security`. |
+
+`npm run check-env` validates all of the above and exits non-zero on a problem.
 
 ---
 
@@ -154,16 +173,27 @@ npm test          # unit suite
 npm run typecheck
 ```
 
-114 tests covering the parts where a bug is expensive: date arithmetic across
+CI runs `tsc --noEmit`, the full suite and a production build on every pull
+request (`.github/workflows/ci.yml`). It starts PGlite as its database, so the
+integration tests run in CI too rather than skipping — no service container and
+no secrets required.
+
+151 tests covering the parts where a bug is expensive: date arithmetic across
 DST and leap years, status derivation at every boundary, the nag state machine
 (milestones, backlog collapse, idempotency, overdue re-nag), RFC 4180 CSV
 read/write including formula-injection escaping, spreadsheet column guessing and
-date coercion, export shaping, PDF generation, and form validation.
+date coercion, export shaping, PDF generation, form validation, and every
+allowed and blocked separation-of-duties transition.
 
-`tests/sweep.integration.test.ts` drives the real cron against a real Postgres —
-status transitions, nag scheduling, idempotency, re-arming on renewal, silence
-after close. It runs whenever `DATABASE_URL` is set (start `npm run db:local`
-first) and skips cleanly when it isn't.
+Two integration files drive real Postgres and skip cleanly when `DATABASE_URL`
+is unset:
+
+- `tests/sweep.integration.test.ts` — status transitions, nag scheduling,
+  idempotency, re-arming on renewal, silence after close.
+- `tests/onboarding.integration.test.ts` — invitations claimed on sign-in, and
+  the whole reminder path: a nagged approver with no account lands on the
+  exception, is joined to the workspace, and closes it, while the author who
+  logged it is blocked from signing off on their own record.
 
 ---
 
@@ -176,12 +206,16 @@ src/
 │   ├── login/                         magic-link sign-in
 │   ├── api/auth/[...nextauth]/        Auth.js handlers
 │   ├── api/cron/daily/                the daily sweep endpoint
+│   ├── a/[token]/                     reminder link: sign in, join, land on the item
+│   ├── invite/[token]/                accept a workspace invitation
+│   ├── security/                      the public trust page
 │   └── w/[slug]/
 │       ├── layout.tsx                 workspace shell + nav
 │       ├── page.tsx                   the register: callouts, filters, table
 │       ├── exceptions/                create, view, edit, lifecycle actions
 │       ├── export/{csv,pdf}/          auditor export routes
 │       ├── import/                    CSV import wizard + template
+│       ├── members/                   invite teammates, manage roles
 │       └── settings/                  workspace name, nag lead times, Slack
 ├── components/                        client components (forms, chips, wizard)
 ├── db/
@@ -195,6 +229,9 @@ src/
 │   ├── csv.ts / import.ts / export.ts CSV read, write, column mapping
 │   ├── pdf.ts                         the auditor report
 │   ├── filter.ts                      register filtering and sorting (pure)
+│   ├── permissions.ts                 separation of duties (pure)
+│   ├── invitations.ts                 invite, claim on sign-in
+│   ├── action-tokens.ts               the actionable link inside a nag
 │   └── workspace.ts                   the tenancy gate
 └── lib/fonts/                         Archivo, embedded in the PDF
 ```
@@ -232,3 +269,15 @@ at once, so you fix the spreadsheet in one pass.
 
 **CSV cells starting `= + - @` are prefixed with `'`.** An exception title is
 attacker-influenced text and these exports get opened in Excel.
+
+**A reminder nobody can act on is just noise.** Nag emails carry a per-recipient
+bearer link that signs the recipient in, joins them to the workspace at the role
+their part on the record implies — approver for the named approver, member for
+the risk owner — and lands them on that exception. This is the same trust class
+as a magic link: 256 bits of entropy, one mailbox, 45-day expiry. A forwarded
+reminder grants access, which is stated plainly on `/security`.
+
+**Sign-off is separated from authorship.** Recording an exception is asking for a
+risk to be accepted; somebody else has to accept it. `lib/permissions.ts` is the
+single place that rule lives, and every sign-off action goes through it on the
+server — the UI only mirrors what it decides.

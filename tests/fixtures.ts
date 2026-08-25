@@ -21,6 +21,7 @@ export function makeException(over: Partial<ExceptionWithEvents> = {}): Exceptio
     approverName: "Priya Raman",
     approverEmail: "priya@example.com",
     status: "open" as ExceptionStatus,
+    createdBy: "priya@example.com",
     expiryDate: "2026-12-01",
     closedAt: null,
     evidenceUrl: null,

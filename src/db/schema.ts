@@ -143,6 +143,8 @@ export const exceptions = pgTable(
     approverName: text("approver_name").notNull(),
     approverEmail: text("approver_email").notNull(),
     status: exceptionStatusEnum("status").notNull().default("open"),
+    // Who logged it. Separation of duties: this person cannot sign off on it.
+    createdBy: text("created_by").notNull().default(""),
     // Calendar date (no time-of-day): expiry is a business day, not an instant.
     expiryDate: text("expiry_date").notNull(),
     closedAt: timestamp("closed_at", { withTimezone: true }),
@@ -195,6 +197,58 @@ export const nagLog = pgTable(
   (t) => [uniqueIndex("nag_log_exception_lead_idx").on(t.exceptionId, t.leadDays)],
 );
 
+/**
+ * A pending workspace invitation. Claimed automatically the first time the
+ * invited address signs in, so an invite works whether the person follows the
+ * link or simply signs up.
+ */
+export const invitations = pgTable(
+  "invitation",
+  {
+    id: id(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: memberRoleEnum("role").notNull().default("member"),
+    token: text("token").notNull().unique(),
+    invitedBy: text("invited_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("invitation_workspace_email_idx").on(t.workspaceId, t.email),
+    index("invitation_email_idx").on(t.email),
+  ],
+);
+
+/**
+ * The bearer link inside a nag email. It authenticates the risk owner or
+ * approver, joins them to the workspace if they are not a member yet, and drops
+ * them on the exception it was minted for — so a reminder is actionable by
+ * someone who has never signed in.
+ */
+export const actionTokens = pgTable(
+  "action_token",
+  {
+    id: id(),
+    token: text("token").notNull().unique(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    exceptionId: text("exception_id")
+      .notNull()
+      .references(() => exceptions.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: memberRoleEnum("role").notNull().default("member"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [index("action_token_exception_idx").on(t.exceptionId, t.email)],
+);
+
 /* -------------------------------------------------------------------------- */
 /* Relations                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -231,4 +285,6 @@ export type Workspace = typeof workspaces.$inferSelect;
 export type Exception = typeof exceptions.$inferSelect;
 export type NewException = typeof exceptions.$inferInsert;
 export type ExceptionEvent = typeof events.$inferSelect;
-export type { ExceptionType, RiskLevel, ExceptionStatus, EventKind } from "@/lib/enums";
+export type Invitation = typeof invitations.$inferSelect;
+export type ActionToken = typeof actionTokens.$inferSelect;
+export type { ExceptionType, RiskLevel, ExceptionStatus, EventKind, MemberRole } from "@/lib/enums";

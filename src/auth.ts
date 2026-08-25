@@ -4,6 +4,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { isDryRun } from "@/lib/notify";
+import { claimInvitations } from "@/lib/invitations";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -46,6 +47,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, user }) {
       session.user.id = user.id;
       return session;
+    },
+  },
+  events: {
+    // An invitation lands whether the person follows the emailed link or simply
+    // signs in with the address that was invited.
+    async signIn({ user }) {
+      if (user.id && user.email) await claimInvitations(user.id, user.email);
     },
   },
 });

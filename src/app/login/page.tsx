@@ -1,10 +1,31 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
 import { Wordmark } from "@/components/wordmark";
 
-export default async function LoginPage() {
+const NOTICES: Record<string, string> = {
+  "reminder:expired":
+    "That reminder link has expired. Sign in with the address the reminder was sent to and you will land back on the exception.",
+  "reminder:unknown":
+    "We could not match that reminder link. Sign in with the address it was sent to.",
+  "invite:invalid": "That invitation link is no longer valid. Ask whoever invited you to resend it.",
+  "invite:mismatch":
+    "That invitation is for a different email address. Sign out first, then open the link again.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reminder?: string; invite?: string; for?: string }>;
+}) {
   const session = await auth();
   if (session?.user) redirect("/");
+
+  const params = await searchParams;
+  const notice =
+    (params.reminder && NOTICES[`reminder:${params.reminder}`]) ||
+    (params.invite && NOTICES[`invite:${params.invite}`]) ||
+    null;
 
   async function sendLink(formData: FormData) {
     "use server";
@@ -54,6 +75,12 @@ export default async function LoginPage() {
           <Wordmark eyebrow="Exception register" />
         </div>
         <h3 className="mt-8 mb-1.5 lg:mt-0">Sign in</h3>
+        {notice && (
+          <p className="mb-4 max-w-[380px] border-l-[3px] border-accent bg-accent-100 px-3 py-2.5 text-[13px] leading-relaxed text-accent-900">
+            {notice}
+            {params.for && <span className="block font-semibold">{params.for}</span>}
+          </p>
+        )}
         <p className="mb-6 text-[14px] text-neutral-700">
           We send a one-time link. No password to manage, no SSO to configure.
         </p>
@@ -77,6 +104,12 @@ export default async function LoginPage() {
             Email me a sign-in link
           </button>
         </form>
+
+        <p className="mt-8 text-[12px] text-neutral-700">
+          <Link href="/security" className="underline underline-offset-[3px] hover:text-accent">
+            How your data is hosted and protected
+          </Link>
+        </p>
       </section>
     </main>
   );

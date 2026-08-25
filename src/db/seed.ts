@@ -23,6 +23,8 @@ type Seed = {
   closedDaysAgo?: number;
   evidenceUrl?: string;
   frameworkTags: string[];
+  /** Who logged it. Defaults to the approver; set to SEED_EMAIL to demo the sign-off block. */
+  createdBy?: string;
   extraEvents?: Array<{ kind: EventKind; note: string; actor: string; daysAgo: number }>;
 };
 
@@ -85,6 +87,9 @@ const SEEDS: Seed[] = [
     createdDaysAgo: 47,
     evidenceUrl: "https://jira.example.com/browse/SEC-2117",
     frameworkTags: ["SOC2", "PCI"],
+    // Logged by the signed-in demo user, so the register shows a live example of
+    // the separation-of-duties block: you cannot sign off on your own exception.
+    createdBy: SEED_EMAIL,
   },
   {
     title: "Accepted: CVE-2024-31402 in image-resize sidecar",
@@ -258,6 +263,7 @@ async function main() {
         closedAt,
         evidenceUrl: seed.evidenceUrl ?? null,
         frameworkTags: seed.frameworkTags,
+        createdBy: seed.createdBy ?? seed.approver[1],
         status: closedAt ? "closed" : "open",
         createdAt,
         updatedAt: closedAt ?? createdAt,
@@ -268,7 +274,7 @@ async function main() {
       {
         kind: "created" as EventKind,
         note: `Logged with expiry ${addDays(now, seed.expiresIn)}.`,
-        actor: seed.approver[1],
+        actor: seed.createdBy ?? seed.approver[1],
         timestamp: createdAt,
       },
       ...(seed.extraEvents ?? []).map((e) => ({

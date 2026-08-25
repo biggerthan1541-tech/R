@@ -8,6 +8,7 @@ import { EXCEPTION_TYPE_LABELS } from "@/lib/labels";
 import { EXCEPTION_TYPES } from "@/lib/enums";
 import { RiskLabel, STATUS_STYLES, StatusChip, Tag } from "@/components/badges";
 import type { ExceptionWithEvents } from "@/lib/export";
+import { EmptyRegister } from "@/components/empty-register";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export default async function RegisterPage({
   const now = today();
 
   const all = await listExceptions(workspace.id);
+  if (all.length === 0) return <EmptyRegister slug={slug} workspaceName={workspace.name} />;
+
   const rows = applyQuery(all, query, now);
   const { owners, frameworks } = facets(all);
 
@@ -261,21 +264,14 @@ export default async function RegisterPage({
 
         {rows.length === 0 && (
           <div className="hair-b px-6 py-16">
-            <h4 className="mb-1.5">
-              {all.length === 0 ? "The register is empty" : "No exceptions match this filter"}
-            </h4>
+            <h4 className="mb-1.5">No exceptions match this filter</h4>
             <p className="mb-4 max-w-[46ch] text-[13px] text-neutral-700">
-              Most teams start with what they already have. Bring your spreadsheet in — Lapse maps
-              your columns to owners, expiry dates and compensating controls.
+              {all.length} exception{all.length === 1 ? " is" : "s are"} on the register — none of
+              them match what you have selected.
             </p>
-            <div className="flex gap-2">
-              <Link className="btn-primary" href={`/w/${slug}/import`}>
-                Import CSV
-              </Link>
-              <Link className="btn-secondary" href={`/w/${slug}`}>
-                Clear filters
-              </Link>
-            </div>
+            <Link className="btn-secondary" href={`/w/${slug}`}>
+              Clear filters
+            </Link>
           </div>
         )}
       </section>

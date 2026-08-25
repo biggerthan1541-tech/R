@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # PGlite gives CI a real Postgres with no service container and no secrets,
+      # so the integration suite runs on every PR instead of skipping.
+      DATABASE_URL: postgres://postgres@127.0.0.1:5432/postgres
+      AUTH_SECRET: ci-only-secret-not-used-outside-this-job
+      AUTH_URL: http://localhost:3000
+      CRON_SECRET: ci-cron-secret
+      DRY_RUN_NOTIFICATIONS: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start local Postgres (PGlite)
+        run: |
+          npm run db:local > /tmp/pglite.log 2>&1 &
+          for i in $(seq 1 60); do
+            if node -e "require('net').connect(5432,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))" 2>/dev/null; then
+              echo "database ready"; exit 0
+            fi
+            sleep 1
+          done
+          echo "database did not start"; cat /tmp/pglite.log; exit 1
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Database log on failure
+        if: failure()
+        run: cat /tmp/pglite.log || true

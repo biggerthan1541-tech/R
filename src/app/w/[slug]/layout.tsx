@@ -41,6 +41,7 @@ export default async function WorkspaceLayout({
         <nav className="flex items-stretch">
           <NavTab href={`/w/${slug}`} label="Register" exact />
           <NavTab href={`/w/${slug}/import`} label="Import" />
+          <NavTab href={`/w/${slug}/members`} label="People" />
           <NavTab href={`/w/${slug}/settings`} label="Settings" />
         </nav>
 
