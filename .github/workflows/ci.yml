@@ -2,8 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # Only the default branch on push — a branch with an open PR would otherwise
+  # run the whole suite twice for every commit.
   push:
-    branches: ["**"]
+    branches: [claude/claude-md-docs-G2uU6]
 
 concurrency:
   group: ci-${{ github.ref }}
