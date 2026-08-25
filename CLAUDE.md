@@ -6,7 +6,10 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository holds **Lapse** — a register for security exceptions, risk
+acceptances and temporary access grants that expire, nag their owner and export
+auditor-ready evidence. See `README.md` for the product brief, setup, environment
+variables and design notes.
 
 ---
 
@@ -25,7 +28,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/lapse-exceptions-mvp-5po7v4` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -82,8 +85,6 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ## Development Conventions
 
-> These are defaults. Override them in this file once the project has an established stack.
-
 ### Code Style
 - No comments unless the *why* is non-obvious (a subtle invariant, a workaround, a hidden constraint).
 - No docstrings beyond a single short line where required by tooling.
@@ -104,34 +105,60 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ---
 
+## Stack
+
+Next.js 15 (App Router) · TypeScript · Tailwind v4 · Drizzle ORM on Postgres ·
+Auth.js v5 (email magic link) · Resend · pdfkit · Vitest. Deploys to Vercel; the
+daily expiry sweep runs on Vercel Cron.
+
+---
+
 ## Running & Testing
 
-> To be filled in once the project has a build system and test runner.
-
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+npm install
+cp .env.example .env.local     # set AUTH_SECRET at minimum
 
-# Run tests
-# npm test  |  pytest  |  etc.
+npm run db:local               # embedded Postgres (PGlite) on :5432 — leave running
+npm run db:migrate
+npm run db:seed
 
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+npm run dev                    # http://localhost:3000
+npm test                       # vitest
+npm run typecheck
+npm run cron:local -- 2026-12-01   # run the daily sweep as if it were that date
 ```
+
+`DRY_RUN_NOTIFICATIONS=1` prints magic links and nag emails to the terminal
+instead of sending them, so no Resend key is needed locally.
 
 ---
 
 ## Project Structure
 
-> To be filled in as the codebase grows.
-
-```
-R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
-```
+See the annotated tree in `README.md`. In short: `src/app` is the App Router,
+`src/lib` holds the pure domain logic (dates, derived status, the nag state
+machine, CSV/PDF export, filtering) and `src/db` holds the Drizzle schema and
+seed.
 
 ---
+
+## Design Invariants
+
+Do not break these without reading the "Design notes" section of `README.md`:
+
+- `expiry_date` is a `YYYY-MM-DD` calendar date, never a timestamp.
+- Status is **derived on read** from `expiry_date` + `closed_at`; the stored
+  column is for reporting and history only.
+- Every lifecycle action (renew / extend / close / reopen) requires a written
+  reason and writes an append-only `event` row.
+- Nag milestones are claimed in `nag_log` *before* sending, so the sweep is
+  idempotent.
+- Every workspace-scoped page and route resolves the workspace through
+  `requireWorkspace()` — that is the only tenancy gate.
+
+---
+
 
 ## Updating This File
 
