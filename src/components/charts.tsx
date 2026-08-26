@@ -399,6 +399,7 @@ export const Sparkline = ({
   if (values.length < 2) return null;
   const max = Math.max(...values);
   const min = Math.min(...values);
+  if (max - min < Math.abs(max) * 0.005) return null;
   const span = max - min || 1;
   const pts = values.map((v, i) => `${(i / (values.length - 1)) * width},${height - ((v - min) / span) * (height - 4) - 2}`);
   return (

@@ -319,11 +319,11 @@ export const seedOnboarding = (rng: Rng, employees: Employee[], today: ISODate):
 const GOAL_TEMPLATES: Record<string, { title: string; metric: string; unit: string; target: number }[]> = {
   default: [
     { title: 'Complete all required compliance training on time', metric: 'Courses completed', unit: 'courses', target: 3 },
-    { title: 'Improve cross-team response time on requests', metric: 'Average response time', unit: 'hours', target: 8 },
+    { title: 'Answer inbound requests within the response SLA', metric: 'Requests answered in SLA', unit: '%', target: 95 },
     { title: 'Document one recurring process this quarter', metric: 'Runbooks published', unit: 'docs', target: 1 },
   ],
   dep_eng: [
-    { title: 'Reduce median build time for the service pipeline', metric: 'Median build time', unit: 'minutes', target: 6 },
+    { title: 'Raise deployment frequency for the scheduling service', metric: 'Deploys per quarter', unit: 'deploys', target: 40 },
     { title: 'Ship the scheduling API v2 migration', metric: 'Endpoints migrated', unit: 'endpoints', target: 14 },
     { title: 'Raise unit test coverage on the payroll module', metric: 'Coverage', unit: '%', target: 85 },
     { title: 'Close the top five customer-reported defects', metric: 'Defects closed', unit: 'defects', target: 5 },
@@ -335,26 +335,26 @@ const GOAL_TEMPLATES: Record<string, { title: string; metric: string; unit: stri
   ],
   dep_whs: [
     { title: 'Hold inventory accuracy above 99.5%', metric: 'Inventory accuracy', unit: '%', target: 99.5 },
-    { title: 'Reduce order pick errors', metric: 'Pick error rate', unit: '%', target: 0.4 },
+    { title: 'Hold order pick accuracy above target', metric: 'Pick accuracy', unit: '%', target: 99.6 },
     { title: 'Complete forklift recertification', metric: 'Certifications current', unit: 'certs', target: 1 },
   ],
   dep_fld: [
     { title: 'Maintain first-visit resolution rate', metric: 'First-visit resolution', unit: '%', target: 88 },
-    { title: 'Zero recordable safety incidents', metric: 'Recordable incidents', unit: 'incidents', target: 0 },
+    { title: 'Sustain an incident-free service year', metric: 'Days without a recordable incident', unit: 'days', target: 365 },
     { title: 'Complete 120 preventive maintenance visits', metric: 'PM visits', unit: 'visits', target: 120 },
   ],
   dep_cs: [
     { title: 'Sustain CSAT above 4.6', metric: 'CSAT', unit: 'score', target: 4.6 },
     { title: 'Resolve tickets within the 8-hour SLA', metric: 'SLA attainment', unit: '%', target: 95 },
-    { title: 'Reduce escalation rate quarter over quarter', metric: 'Escalation rate', unit: '%', target: 4 },
+    { title: 'Raise first-contact resolution', metric: 'First-contact resolution', unit: '%', target: 82 },
   ],
   dep_fin: [
-    { title: 'Close the books within four business days', metric: 'Days to close', unit: 'days', target: 4 },
-    { title: 'Reduce aged receivables over 60 days', metric: 'AR over 60 days', unit: 'USD', target: 120000 },
-    { title: 'Complete the annual audit with no material findings', metric: 'Material findings', unit: 'findings', target: 0 },
+    { title: 'Close the books on time every month', metric: 'On-time closes', unit: 'months', target: 12 },
+    { title: 'Collect aged receivables over 60 days', metric: 'Aged AR collected', unit: 'USD', target: 120000 },
+    { title: 'Clear the annual audit checklist', metric: 'Audit items cleared', unit: 'items', target: 42 },
   ],
   dep_hr: [
-    { title: 'Reduce median time to fill', metric: 'Time to fill', unit: 'days', target: 32 },
+    { title: 'Fill open requisitions on plan', metric: 'Requisitions filled', unit: 'reqs', target: 24 },
     { title: 'Reach 95% onboarding task completion by day 30', metric: 'Completion by day 30', unit: '%', target: 95 },
     { title: 'Deliver manager training to every new people leader', metric: 'Managers trained', unit: 'managers', target: 12 },
   ],

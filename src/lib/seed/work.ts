@@ -263,7 +263,7 @@ export const seedTime = (
       for (let d = 0; ; d++) {
         const date = addDays(period.start, d);
         if (date > period.end) break;
-        if (date > today) break;
+        if (date >= today) break;
         if (date < emp.hireDate) continue;
 
         const dow = dayOfWeek(date);

@@ -15,19 +15,40 @@ export const Login = () => {
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
 
-  /** One representative account per role, plus a plain employee. */
+  /**
+   * One representative account per role. Preferred job titles keep the picker
+   * meaningful — a front-line supervisor demonstrates "manager" far better
+   * than an executive who also happens to have direct reports.
+   */
   const personas = useMemo(() => {
+    const preferred: Record<Role, string[]> = {
+      employee: ['job_fldtech1', 'job_whsassoc', 'job_csrep1'],
+      manager: ['job_fldsup', 'job_whsmgr', 'job_csmgr'],
+      hr_admin: ['job_hrd', 'job_hrbp'],
+      payroll_admin: ['job_payadm'],
+      recruiter: ['job_rec'],
+      benefits_admin: ['job_benadm'],
+      finance: ['job_ctrl', 'job_cfo'],
+      sys_admin: ['job_sysadm', 'job_itdir'],
+      executive: ['job_ceo', 'job_coo'],
+    };
     const out: { role: Role; userId: string }[] = [];
     const taken = new Set<string>();
+    const employeeById = new Map(db.employees.map((e) => [e.id, e] as const));
+
     for (const r of ROLES) {
-      if (r.id === 'employee') continue;
-      const match = db.users.find((u) => u.roles.includes(r.id) && u.status === 'active' && !taken.has(u.id));
+      const candidates = db.users.filter(
+        (u) => u.status === 'active' && !taken.has(u.id) &&
+          (r.id === 'employee' ? u.roles.length === 1 : u.roles.includes(r.id)),
+      );
+      const byJob = preferred[r.id]
+        .map((jobId) => candidates.find((u) => employeeById.get(u.employeeId ?? '')?.jobTitleId === jobId))
+        .find(Boolean);
+      const match = byJob ?? candidates[0];
       if (match) { taken.add(match.id); out.push({ role: r.id, userId: match.id }); }
     }
-    const plain = db.users.find((u) => u.roles.length === 1 && u.roles[0] === 'employee' && u.status === 'active');
-    if (plain) out.unshift({ role: 'employee', userId: plain.id });
     return out;
-  }, [db.users]);
+  }, [db.users, db.employees]);
 
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();

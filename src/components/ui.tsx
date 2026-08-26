@@ -896,12 +896,12 @@ export const StageStepper = ({
 };
 
 export const Alert = ({
-  tone = 'info', title, children, action, icon: Icon,
+  tone = 'info', title, children, action, icon: Icon, className,
 }: {
   tone?: Tone; title?: React.ReactNode; children?: React.ReactNode;
-  action?: React.ReactNode; icon?: React.ComponentType<{ className?: string }>;
+  action?: React.ReactNode; icon?: React.ComponentType<{ className?: string }>; className?: string;
 }) => (
-  <div className={cx('flex items-start gap-3 rounded-lg border p-3.5', TONES[tone])}>
+  <div className={cx('flex items-start gap-3 rounded-lg border p-3.5', TONES[tone], className)}>
     {Icon ? <Icon className="mt-0.5 h-4 w-4 shrink-0" /> : null}
     <div className="min-w-0 flex-1">
       {title ? <p className="text-sm font-medium">{title}</p> : null}
