@@ -1,0 +1,401 @@
+import type {
+  AutomationRule, BenefitPlan, Course, Department, Integration, JobTitle, Location,
+  OnboardingTemplate, Organization, PayGroup, PermissionGroup, PtoPolicy,
+} from '../types';
+
+export const TENANT: Organization = {
+  id: 'org_cardinal',
+  legalName: 'Cardinal Peak Group, Inc.',
+  dba: 'Cardinal Peak',
+  ein: '84-7729341',
+  addressLine1: '1180 Larimer Street, Suite 900',
+  city: 'Denver',
+  state: 'CO',
+  postalCode: '80204',
+  phone: '3035550188',
+  fiscalYearStart: '01-01',
+  defaultCurrency: 'USD',
+  timezone: 'America/Denver',
+  workweekStart: 0,
+  industry: 'Industrial Services & Distribution',
+  founded: '2009',
+};
+
+export const LOCATIONS: Location[] = [
+  { id: 'loc_den', code: 'DEN', name: 'Denver Headquarters', addressLine1: '1180 Larimer St, Suite 900', city: 'Denver', state: 'CO', postalCode: '80204', timezone: 'America/Denver', geo: { lat: 39.7476, lng: -104.9967 }, geofenceMeters: 150, active: true },
+  { id: 'loc_phx', code: 'PHX', name: 'Phoenix Distribution Center', addressLine1: '4420 W Buckeye Rd', city: 'Phoenix', state: 'AZ', postalCode: '85043', timezone: 'America/Phoenix', geo: { lat: 33.4373, lng: -112.1553 }, geofenceMeters: 300, active: true },
+  { id: 'loc_aus', code: 'AUS', name: 'Austin Technology Office', addressLine1: '901 E 6th St, Floor 4', city: 'Austin', state: 'TX', postalCode: '78702', timezone: 'America/Chicago', geo: { lat: 30.2669, lng: -97.7335 }, geofenceMeters: 120, active: true },
+  { id: 'loc_cmh', code: 'CMH', name: 'Columbus Service Hub', addressLine1: '2300 Westbelt Dr', city: 'Columbus', state: 'OH', postalCode: '43228', timezone: 'America/New_York', geo: { lat: 39.9556, lng: -83.1215 }, geofenceMeters: 250, active: true },
+  { id: 'loc_sac', code: 'SAC', name: 'Sacramento Field Depot', addressLine1: '8300 Elder Creek Rd', city: 'Sacramento', state: 'CA', postalCode: '95828', timezone: 'America/Los_Angeles', geo: { lat: 38.5215, lng: -121.4034 }, geofenceMeters: 250, active: true },
+  { id: 'loc_rmt', code: 'RMT', name: 'Remote / Distributed', addressLine1: '—', city: 'Distributed', state: 'CO', postalCode: '00000', timezone: 'America/Denver', geo: { lat: 39.7476, lng: -104.9967 }, geofenceMeters: 0, active: true },
+];
+
+export const DEPARTMENTS: Department[] = [
+  { id: 'dep_exec', code: 'EXEC', name: 'Executive', costCenter: 'CC-1000', glAccount: '6000-EXEC', headEmployeeId: null, parentId: null },
+  { id: 'dep_fin', code: 'FIN', name: 'Finance & Accounting', costCenter: 'CC-1100', glAccount: '6010-FIN', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_hr', code: 'HR', name: 'People Operations', costCenter: 'CC-1200', glAccount: '6020-HR', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_it', code: 'IT', name: 'Information Technology', costCenter: 'CC-1300', glAccount: '6030-IT', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_eng', code: 'ENG', name: 'Engineering', costCenter: 'CC-2000', glAccount: '6100-ENG', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_ops', code: 'OPS', name: 'Operations', costCenter: 'CC-3000', glAccount: '6200-OPS', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_fld', code: 'FLD', name: 'Field Services', costCenter: 'CC-3100', glAccount: '6210-FLD', headEmployeeId: null, parentId: 'dep_ops' },
+  { id: 'dep_whs', code: 'WHS', name: 'Warehouse & Logistics', costCenter: 'CC-3200', glAccount: '6220-WHS', headEmployeeId: null, parentId: 'dep_ops' },
+  { id: 'dep_qa', code: 'QA', name: 'Quality & Safety', costCenter: 'CC-3300', glAccount: '6230-QA', headEmployeeId: null, parentId: 'dep_ops' },
+  { id: 'dep_sls', code: 'SLS', name: 'Sales', costCenter: 'CC-4000', glAccount: '6300-SLS', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_mkt', code: 'MKT', name: 'Marketing', costCenter: 'CC-4100', glAccount: '6310-MKT', headEmployeeId: null, parentId: 'dep_exec' },
+  { id: 'dep_cs', code: 'CS', name: 'Customer Support', costCenter: 'CC-4200', glAccount: '6320-CS', headEmployeeId: null, parentId: 'dep_exec' },
+];
+
+type JobSpec = [id: string, code: string, name: string, dept: string, level: JobTitle['level'], flsa: JobTitle['flsa'], min: number, max: number, eeo: string];
+
+const JOB_SPECS: JobSpec[] = [
+  ['job_ceo', 'EXEC-001', 'Chief Executive Officer', 'dep_exec', 'E1', 'exempt', 320000, 420000, 'Executive/Senior Officials'],
+  ['job_cfo', 'EXEC-002', 'Chief Financial Officer', 'dep_exec', 'E1', 'exempt', 260000, 330000, 'Executive/Senior Officials'],
+  ['job_chro', 'EXEC-003', 'Chief People Officer', 'dep_exec', 'E1', 'exempt', 230000, 300000, 'Executive/Senior Officials'],
+  ['job_coo', 'EXEC-004', 'Chief Operating Officer', 'dep_exec', 'E1', 'exempt', 270000, 340000, 'Executive/Senior Officials'],
+  ['job_cto', 'EXEC-005', 'Chief Technology Officer', 'dep_exec', 'E1', 'exempt', 265000, 335000, 'Executive/Senior Officials'],
+  ['job_ctrl', 'FIN-101', 'Controller', 'dep_fin', 'M2', 'exempt', 150000, 190000, 'First/Mid Officials'],
+  ['job_acct', 'FIN-201', 'Staff Accountant', 'dep_fin', 'IC2', 'exempt', 68000, 92000, 'Professionals'],
+  ['job_apspec', 'FIN-202', 'Accounts Payable Specialist', 'dep_fin', 'IC2', 'non_exempt', 25, 34, 'Administrative Support'],
+  ['job_fpna', 'FIN-203', 'Financial Analyst', 'dep_fin', 'IC3', 'exempt', 88000, 118000, 'Professionals'],
+  ['job_hrd', 'HR-101', 'Director, People Operations', 'dep_hr', 'M2', 'exempt', 145000, 180000, 'First/Mid Officials'],
+  ['job_hrbp', 'HR-201', 'HR Business Partner', 'dep_hr', 'IC3', 'exempt', 88000, 115000, 'Professionals'],
+  ['job_payadm', 'HR-202', 'Payroll Administrator', 'dep_hr', 'IC3', 'exempt', 78000, 102000, 'Professionals'],
+  ['job_benadm', 'HR-203', 'Benefits Administrator', 'dep_hr', 'IC3', 'exempt', 76000, 99000, 'Professionals'],
+  ['job_rec', 'HR-204', 'Talent Acquisition Partner', 'dep_hr', 'IC3', 'exempt', 74000, 96000, 'Professionals'],
+  ['job_hrcoord', 'HR-205', 'People Operations Coordinator', 'dep_hr', 'IC1', 'non_exempt', 24, 31, 'Administrative Support'],
+  ['job_itdir', 'IT-101', 'Director, IT', 'dep_it', 'M2', 'exempt', 150000, 185000, 'First/Mid Officials'],
+  ['job_sysadm', 'IT-201', 'Systems Administrator', 'dep_it', 'IC3', 'exempt', 92000, 122000, 'Professionals'],
+  ['job_ithelp', 'IT-202', 'IT Support Specialist', 'dep_it', 'IC2', 'non_exempt', 26, 35, 'Technicians'],
+  ['job_engmgr', 'ENG-101', 'Engineering Manager', 'dep_eng', 'M1', 'exempt', 165000, 205000, 'First/Mid Officials'],
+  ['job_swe1', 'ENG-201', 'Software Engineer I', 'dep_eng', 'IC1', 'exempt', 92000, 116000, 'Professionals'],
+  ['job_swe2', 'ENG-202', 'Software Engineer II', 'dep_eng', 'IC2', 'exempt', 118000, 148000, 'Professionals'],
+  ['job_swe3', 'ENG-203', 'Senior Software Engineer', 'dep_eng', 'IC3', 'exempt', 150000, 186000, 'Professionals'],
+  ['job_swe4', 'ENG-204', 'Staff Engineer', 'dep_eng', 'IC4', 'exempt', 188000, 232000, 'Professionals'],
+  ['job_qaeng', 'ENG-205', 'QA Engineer', 'dep_eng', 'IC2', 'exempt', 96000, 124000, 'Professionals'],
+  ['job_opsdir', 'OPS-101', 'Director, Operations', 'dep_ops', 'M2', 'exempt', 148000, 182000, 'First/Mid Officials'],
+  ['job_opsmgr', 'OPS-102', 'Operations Manager', 'dep_ops', 'M1', 'exempt', 102000, 132000, 'First/Mid Officials'],
+  ['job_opsanl', 'OPS-201', 'Operations Analyst', 'dep_ops', 'IC2', 'exempt', 72000, 94000, 'Professionals'],
+  ['job_fldsup', 'FLD-101', 'Field Services Supervisor', 'dep_fld', 'M1', 'exempt', 88000, 112000, 'First/Mid Officials'],
+  ['job_fldtech2', 'FLD-201', 'Senior Field Technician', 'dep_fld', 'IC3', 'non_exempt', 33, 42, 'Craft Workers'],
+  ['job_fldtech1', 'FLD-202', 'Field Technician', 'dep_fld', 'IC2', 'non_exempt', 25, 33, 'Craft Workers'],
+  ['job_disp', 'FLD-203', 'Dispatcher', 'dep_fld', 'IC2', 'non_exempt', 23, 30, 'Administrative Support'],
+  ['job_whsmgr', 'WHS-101', 'Warehouse Manager', 'dep_whs', 'M1', 'exempt', 84000, 108000, 'First/Mid Officials'],
+  ['job_whslead', 'WHS-201', 'Warehouse Lead', 'dep_whs', 'IC2', 'non_exempt', 24, 31, 'Operatives'],
+  ['job_whsassoc', 'WHS-202', 'Warehouse Associate', 'dep_whs', 'IC1', 'non_exempt', 19, 25, 'Laborers'],
+  ['job_driver', 'WHS-203', 'Delivery Driver', 'dep_whs', 'IC2', 'non_exempt', 22, 29, 'Operatives'],
+  ['job_qamgr', 'QA-101', 'Quality & Safety Manager', 'dep_qa', 'M1', 'exempt', 96000, 124000, 'First/Mid Officials'],
+  ['job_qainsp', 'QA-201', 'Quality Inspector', 'dep_qa', 'IC2', 'non_exempt', 24, 32, 'Technicians'],
+  ['job_slsdir', 'SLS-101', 'Director, Sales', 'dep_sls', 'M2', 'exempt', 155000, 195000, 'First/Mid Officials'],
+  ['job_ae', 'SLS-201', 'Account Executive', 'dep_sls', 'IC3', 'exempt', 78000, 105000, 'Sales Workers'],
+  ['job_sdr', 'SLS-202', 'Sales Development Rep', 'dep_sls', 'IC1', 'non_exempt', 24, 30, 'Sales Workers'],
+  ['job_mktmgr', 'MKT-101', 'Marketing Manager', 'dep_mkt', 'M1', 'exempt', 105000, 135000, 'First/Mid Officials'],
+  ['job_mktspec', 'MKT-201', 'Marketing Specialist', 'dep_mkt', 'IC2', 'exempt', 68000, 88000, 'Professionals'],
+  ['job_csmgr', 'CS-101', 'Customer Support Manager', 'dep_cs', 'M1', 'exempt', 92000, 118000, 'First/Mid Officials'],
+  ['job_csrep2', 'CS-201', 'Senior Support Specialist', 'dep_cs', 'IC2', 'non_exempt', 25, 32, 'Administrative Support'],
+  ['job_csrep1', 'CS-202', 'Support Specialist', 'dep_cs', 'IC1', 'non_exempt', 21, 27, 'Administrative Support'],
+];
+
+export const JOB_TITLES: JobTitle[] = JOB_SPECS.map(([id, code, name, departmentId, level, flsa, min, max, eeo]) => ({
+  id, code, name, departmentId, level, flsa,
+  eeoCategory: eeo,
+  minSalary: min,
+  maxSalary: max,
+  description: `${name} in ${DEPARTMENTS.find((d) => d.id === departmentId)?.name}. ${
+    flsa === 'exempt' ? 'Exempt, salaried position.' : 'Non-exempt, hourly position eligible for overtime.'
+  }`,
+}));
+
+export const PAY_GROUPS: PayGroup[] = [
+  { id: 'pg_corp', name: 'Corporate — Semi-monthly', frequency: 'semimonthly', locationIds: ['loc_den', 'loc_aus', 'loc_rmt'], checkDateOffsetDays: 5, glSegment: 'GL-CORP' },
+  { id: 'pg_field', name: 'Field & Warehouse — Biweekly', frequency: 'biweekly', locationIds: ['loc_phx', 'loc_cmh', 'loc_sac'], checkDateOffsetDays: 5, glSegment: 'GL-FIELD' },
+];
+
+export const PTO_POLICIES: PtoPolicy[] = [
+  {
+    id: 'pto_std', name: 'Standard Accrual (Salaried)', description: '15 days accrued per year, 40 hours carryover, unlimited sick.',
+    accrualMethod: 'per_pay_period', hoursPerYear: 120, maxCarryoverHours: 40, maxBalanceHours: 240,
+    waitingPeriodDays: 30, requiresApproval: true, minNoticeDays: 3, allowNegative: false,
+    kinds: ['vacation', 'sick', 'personal', 'bereavement', 'jury_duty', 'parental'], active: true,
+  },
+  {
+    id: 'pto_senior', name: 'Senior Accrual (5+ years)', description: '20 days accrued per year with a higher carryover ceiling.',
+    accrualMethod: 'per_pay_period', hoursPerYear: 160, maxCarryoverHours: 80, maxBalanceHours: 320,
+    waitingPeriodDays: 0, requiresApproval: true, minNoticeDays: 3, allowNegative: false,
+    kinds: ['vacation', 'sick', 'personal', 'bereavement', 'jury_duty', 'parental'], active: true,
+  },
+  {
+    id: 'pto_hourly', name: 'Hourly Accrual', description: '1 hour of PTO per 30 hours worked, capped at 80 hours.',
+    accrualMethod: 'per_pay_period', hoursPerYear: 80, maxCarryoverHours: 40, maxBalanceHours: 160,
+    waitingPeriodDays: 90, requiresApproval: true, minNoticeDays: 7, allowNegative: false,
+    kinds: ['vacation', 'sick', 'personal', 'bereavement', 'jury_duty'], active: true,
+  },
+  {
+    id: 'pto_exec', name: 'Executive Flexible', description: 'Flexible time off with manager notification, no fixed accrual.',
+    accrualMethod: 'unlimited', hoursPerYear: 0, maxCarryoverHours: 0, maxBalanceHours: 0,
+    waitingPeriodDays: 0, requiresApproval: false, minNoticeDays: 0, allowNegative: true,
+    kinds: ['vacation', 'sick', 'personal', 'bereavement', 'jury_duty', 'parental'], active: true,
+  },
+];
+
+export const BENEFIT_PLANS: BenefitPlan[] = [
+  {
+    id: 'plan_med_ppo', type: 'medical', name: 'Summit PPO 1000', carrier: 'Aspen Health Alliance', planYear: 2026,
+    network: 'National PPO', deductibleIndividual: 1000, deductibleFamily: 2500, oopMaxIndividual: 4000,
+    coinsurance: 20, pcpCopay: 25, rxCopay: 15,
+    employeeCostMonthly: { employee: 148, employee_spouse: 372, employee_children: 328, family: 512 },
+    employerCostMonthly: { employee: 592, employee_spouse: 918, employee_children: 842, family: 1240 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Broad national network with predictable copays. Best for families who want provider choice.', active: true,
+  },
+  {
+    id: 'plan_med_hdhp', type: 'medical', name: 'Ridgeline HDHP 3200 + HSA', carrier: 'Aspen Health Alliance', planYear: 2026,
+    network: 'National PPO', deductibleIndividual: 3200, deductibleFamily: 6400, oopMaxIndividual: 6500,
+    coinsurance: 10, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 62, employee_spouse: 188, employee_children: 164, family: 268 },
+    employerCostMonthly: { employee: 528, employee_spouse: 812, employee_children: 748, family: 1080 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Lowest premium, HSA-eligible with a $750 employer seed. Best if you rarely use care.', active: true,
+  },
+  {
+    id: 'plan_med_hmo', type: 'medical', name: 'Basecamp HMO 500', carrier: 'Verdant Care Network', planYear: 2026,
+    network: 'Regional HMO', deductibleIndividual: 500, deductibleFamily: 1500, oopMaxIndividual: 3000,
+    coinsurance: 10, pcpCopay: 15, rxCopay: 10,
+    employeeCostMonthly: { employee: 176, employee_spouse: 428, employee_children: 386, family: 594 },
+    employerCostMonthly: { employee: 604, employee_spouse: 946, employee_children: 878, family: 1288 },
+    eligibility: { employmentTypes: ['full_time'], minHoursPerWeek: 32, waitingPeriodDays: 30 },
+    summary: 'Lowest out-of-pocket costs with a referral-based regional network.', active: true,
+  },
+  {
+    id: 'plan_den', type: 'dental', name: 'ClearSmile Dental PPO', carrier: 'Northbridge Dental', planYear: 2026,
+    network: 'Dental PPO', deductibleIndividual: 50, deductibleFamily: 150, oopMaxIndividual: 1500,
+    coinsurance: 20, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 12, employee_spouse: 28, employee_children: 32, family: 46 },
+    employerCostMonthly: { employee: 32, employee_spouse: 56, employee_children: 62, family: 84 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Preventive care covered at 100%, $1,500 annual maximum.', active: true,
+  },
+  {
+    id: 'plan_vis', type: 'vision', name: 'ClearView Vision', carrier: 'Northbridge Vision', planYear: 2026,
+    network: 'Vision', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 10, rxCopay: 0,
+    employeeCostMonthly: { employee: 6, employee_spouse: 12, employee_children: 13, family: 19 },
+    employerCostMonthly: { employee: 8, employee_spouse: 14, employee_children: 16, family: 22 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Annual exam plus a $200 frame or contact-lens allowance.', active: true,
+  },
+  {
+    id: 'plan_life', type: 'life', name: 'Basic Life & AD&D (2× salary)', carrier: 'Meridian Assurance', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    employerCostMonthly: { employee: 24, employee_spouse: 24, employee_children: 24, family: 24 },
+    eligibility: { employmentTypes: ['full_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Company-paid coverage at 2× base salary, capped at $500,000.', active: true,
+  },
+  {
+    id: 'plan_std', type: 'std', name: 'Short-Term Disability', carrier: 'Meridian Assurance', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 14, employee_spouse: 14, employee_children: 14, family: 14 },
+    employerCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    eligibility: { employmentTypes: ['full_time'], minHoursPerWeek: 30, waitingPeriodDays: 60 },
+    summary: 'Replaces 60% of weekly earnings for up to 12 weeks.', active: true,
+  },
+  {
+    id: 'plan_ltd', type: 'ltd', name: 'Long-Term Disability', carrier: 'Meridian Assurance', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 18, employee_spouse: 18, employee_children: 18, family: 18 },
+    employerCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    eligibility: { employmentTypes: ['full_time'], minHoursPerWeek: 30, waitingPeriodDays: 90 },
+    summary: 'Replaces 60% of monthly earnings after a 90-day elimination period.', active: true,
+  },
+  {
+    id: 'plan_401k', type: 'retirement_401k', name: 'Cardinal Peak 401(k)', carrier: 'Highpoint Retirement', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    employerCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 20, waitingPeriodDays: 90 },
+    summary: 'Dollar-for-dollar match on the first 4% of pay, immediate vesting.', active: true,
+  },
+  {
+    id: 'plan_hsa', type: 'hsa', name: 'Health Savings Account', carrier: 'Highpoint Retirement', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    employerCostMonthly: { employee: 62.5, employee_spouse: 62.5, employee_children: 62.5, family: 125 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Pre-tax savings paired with the HDHP. $750 individual / $1,500 family employer seed.', active: true,
+  },
+  {
+    id: 'plan_fsa', type: 'fsa', name: 'Healthcare FSA', carrier: 'Highpoint Retirement', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    employerCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 30, waitingPeriodDays: 30 },
+    summary: 'Set aside up to $3,300 pre-tax for eligible medical expenses.', active: true,
+  },
+  {
+    id: 'plan_commuter', type: 'commuter', name: 'Commuter Benefits', carrier: 'Highpoint Retirement', planYear: 2026,
+    network: '—', deductibleIndividual: 0, deductibleFamily: 0, oopMaxIndividual: 0,
+    coinsurance: 0, pcpCopay: 0, rxCopay: 0,
+    employeeCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    employerCostMonthly: { employee: 0, employee_spouse: 0, employee_children: 0, family: 0 },
+    eligibility: { employmentTypes: ['full_time', 'part_time'], minHoursPerWeek: 20, waitingPeriodDays: 0 },
+    summary: 'Pre-tax transit and parking, up to $325 per month.', active: true,
+  },
+];
+
+export const COURSES: Course[] = [
+  { id: 'crs_harass', code: 'CMP-101', title: 'Preventing Workplace Harassment', category: 'compliance', description: 'Legally required annual training on harassment prevention, bystander intervention and reporting channels.', durationMinutes: 60, format: 'video', mandatory: true, recurrenceMonths: 12, modules: [{ title: 'Recognizing harassment', minutes: 20 }, { title: 'Bystander intervention', minutes: 20 }, { title: 'Reporting and non-retaliation', minutes: 20 }], passingScore: 80, active: true },
+  { id: 'crs_sec', code: 'CMP-102', title: 'Security & Data Privacy Essentials', category: 'compliance', description: 'Phishing, credential hygiene, and handling of personally identifiable information.', durationMinutes: 45, format: 'quiz', mandatory: true, recurrenceMonths: 12, modules: [{ title: 'Phishing and social engineering', minutes: 15 }, { title: 'Handling PII', minutes: 15 }, { title: 'Incident reporting', minutes: 15 }], passingScore: 85, active: true },
+  { id: 'crs_safety', code: 'SAF-101', title: 'Warehouse Safety & Forklift Awareness', category: 'safety', description: 'OSHA-aligned safety practices for warehouse and dock environments.', durationMinutes: 90, format: 'instructor_led', mandatory: true, recurrenceMonths: 12, modules: [{ title: 'Hazard identification', minutes: 30 }, { title: 'Powered equipment', minutes: 30 }, { title: 'Lockout / tagout', minutes: 30 }], passingScore: 90, active: true },
+  { id: 'crs_ladder', code: 'SAF-102', title: 'Field Safety: Ladders, Heights & Electrical', category: 'safety', description: 'Required for all field technicians working above six feet or near live circuits.', durationMinutes: 75, format: 'video', mandatory: true, recurrenceMonths: 24, modules: [{ title: 'Fall protection', minutes: 30 }, { title: 'Electrical safety', minutes: 25 }, { title: 'Personal protective equipment', minutes: 20 }], passingScore: 90, active: true },
+  { id: 'crs_lead1', code: 'LDR-201', title: 'First-Time Manager Foundations', category: 'leadership', description: 'Coaching conversations, delegation, and running effective one-on-ones.', durationMinutes: 180, format: 'instructor_led', mandatory: false, recurrenceMonths: null, modules: [{ title: 'From peer to manager', minutes: 60 }, { title: 'Coaching conversations', minutes: 60 }, { title: 'Performance feedback', minutes: 60 }], passingScore: 0, active: true },
+  { id: 'crs_interview', code: 'LDR-202', title: 'Structured Interviewing & Bias Awareness', category: 'leadership', description: 'Required before joining an interview panel.', durationMinutes: 60, format: 'video', mandatory: false, recurrenceMonths: 24, modules: [{ title: 'Structured scorecards', minutes: 30 }, { title: 'Bias interrupters', minutes: 30 }], passingScore: 80, active: true },
+  { id: 'crs_excel', code: 'TEC-201', title: 'Advanced Spreadsheet Modeling', category: 'technical', description: 'Pivot tables, lookup functions, and building maintainable models.', durationMinutes: 120, format: 'video', mandatory: false, recurrenceMonths: null, modules: [{ title: 'Data hygiene', minutes: 40 }, { title: 'Lookups and pivots', minutes: 40 }, { title: 'Model structure', minutes: 40 }], passingScore: 70, active: true },
+  { id: 'crs_wms', code: 'TEC-202', title: 'Warehouse Management System Certification', category: 'technical', description: 'Operating the WMS for receiving, put-away, picking and cycle counts.', durationMinutes: 150, format: 'instructor_led', mandatory: false, recurrenceMonths: null, modules: [{ title: 'Receiving and put-away', minutes: 50 }, { title: 'Picking and packing', minutes: 50 }, { title: 'Cycle counting', minutes: 50 }], passingScore: 85, active: true },
+  { id: 'crs_onb', code: 'ONB-101', title: 'Welcome to Cardinal Peak', category: 'onboarding', description: 'Company history, operating principles, and how the business makes money.', durationMinutes: 45, format: 'video', mandatory: true, recurrenceMonths: null, modules: [{ title: 'Who we are', minutes: 15 }, { title: 'How we operate', minutes: 15 }, { title: 'Your first 90 days', minutes: 15 }], passingScore: 0, active: true },
+  { id: 'crs_benefits', code: 'ONB-102', title: 'Understanding Your Benefits', category: 'onboarding', description: 'Walkthrough of medical, dental, vision, retirement and time-off programs.', durationMinutes: 40, format: 'document', mandatory: true, recurrenceMonths: null, modules: [{ title: 'Health plans', minutes: 20 }, { title: 'Retirement and time off', minutes: 20 }], passingScore: 0, active: true },
+  { id: 'crs_comm', code: 'PRO-201', title: 'Written Communication for Distributed Teams', category: 'professional', description: 'Writing decisions, updates and documents people actually read.', durationMinutes: 90, format: 'video', mandatory: false, recurrenceMonths: null, modules: [{ title: 'Structure first', minutes: 45 }, { title: 'Editing for clarity', minutes: 45 }], passingScore: 0, active: true },
+  { id: 'crs_dot', code: 'CMP-103', title: 'DOT Hours-of-Service Compliance', category: 'compliance', description: 'Required for all commercial delivery drivers.', durationMinutes: 60, format: 'quiz', mandatory: true, recurrenceMonths: 12, modules: [{ title: 'Hours of service', minutes: 30 }, { title: 'Logging and inspections', minutes: 30 }], passingScore: 90, active: true },
+];
+
+export const ONBOARDING_TEMPLATES: OnboardingTemplate[] = [
+  {
+    id: 'onb_std', name: 'Corporate New Hire', departmentIds: ['dep_exec', 'dep_fin', 'dep_hr', 'dep_it', 'dep_eng', 'dep_sls', 'dep_mkt', 'dep_cs'], active: true,
+    tasks: [
+      { key: 'welcome', title: 'Read your welcome packet', owner: 'employee', kind: 'acknowledgement', dueOffsetDays: 0, required: true, description: 'Company overview, first-week schedule and who to contact.' },
+      { key: 'personal', title: 'Confirm personal information', owner: 'employee', kind: 'form', dueOffsetDays: 1, required: true, description: 'Verify legal name, address, phone and emergency contacts.' },
+      { key: 'i9', title: 'Complete Form I-9, Section 1', owner: 'employee', kind: 'tax_form', dueOffsetDays: 1, required: true, description: 'Employment eligibility verification. Section 2 is completed by HR within three business days.' },
+      { key: 'w4', title: 'Complete Form W-4', owner: 'employee', kind: 'tax_form', dueOffsetDays: 2, required: true, description: 'Federal and state withholding elections.' },
+      { key: 'dd', title: 'Set up direct deposit', owner: 'employee', kind: 'direct_deposit', dueOffsetDays: 3, required: true, description: 'Add at least one account before your first pay date.' },
+      { key: 'handbook', title: 'Acknowledge the employee handbook', owner: 'employee', kind: 'document_sign', dueOffsetDays: 5, required: true, description: 'Signature required.' },
+      { key: 'benefits', title: 'Elect your benefits', owner: 'employee', kind: 'benefits', dueOffsetDays: 30, required: true, description: 'You have 30 days from your hire date to make elections.' },
+      { key: 'training', title: 'Finish required compliance training', owner: 'employee', kind: 'training', dueOffsetDays: 14, required: true, description: 'Harassment prevention and security essentials.' },
+      { key: 'equipment', title: 'Issue laptop and access badge', owner: 'it', kind: 'equipment', dueOffsetDays: -2, required: true, description: 'Provision hardware, accounts and building access.' },
+      { key: 'accounts', title: 'Provision system accounts', owner: 'it', kind: 'equipment', dueOffsetDays: -1, required: true, description: 'Email, SSO, and role-based application access.' },
+      { key: 'i9_hr', title: 'Complete Form I-9, Section 2', owner: 'hr', kind: 'tax_form', dueOffsetDays: 3, required: true, description: 'Verify original documents in person or via authorized representative.' },
+      { key: 'payroll_setup', title: 'Add employee to pay group', owner: 'payroll', kind: 'form', dueOffsetDays: 2, required: true, description: 'Confirm pay group, compensation and tax jurisdiction.' },
+      { key: 'mgr_plan', title: 'Prepare a 30/60/90 day plan', owner: 'manager', kind: 'form', dueOffsetDays: 3, required: true, description: 'Define first-quarter expectations and early wins.' },
+      { key: 'mgr_intro', title: 'Schedule team introductions', owner: 'manager', kind: 'meeting', dueOffsetDays: 2, required: false, description: 'Book intro meetings with the immediate team and key partners.' },
+    ],
+  },
+  {
+    id: 'onb_field', name: 'Field & Warehouse New Hire', departmentIds: ['dep_ops', 'dep_fld', 'dep_whs', 'dep_qa'], active: true,
+    tasks: [
+      { key: 'welcome', title: 'Read your welcome packet', owner: 'employee', kind: 'acknowledgement', dueOffsetDays: 0, required: true, description: 'Site rules, shift expectations and safety contacts.' },
+      { key: 'personal', title: 'Confirm personal information', owner: 'employee', kind: 'form', dueOffsetDays: 1, required: true, description: 'Verify legal name, address, phone and emergency contacts.' },
+      { key: 'i9', title: 'Complete Form I-9, Section 1', owner: 'employee', kind: 'tax_form', dueOffsetDays: 1, required: true, description: 'Employment eligibility verification.' },
+      { key: 'w4', title: 'Complete Form W-4', owner: 'employee', kind: 'tax_form', dueOffsetDays: 2, required: true, description: 'Federal and state withholding elections.' },
+      { key: 'dd', title: 'Set up direct deposit', owner: 'employee', kind: 'direct_deposit', dueOffsetDays: 3, required: true, description: 'Add at least one account before your first pay date.' },
+      { key: 'safety', title: 'Complete site safety training', owner: 'employee', kind: 'training', dueOffsetDays: 5, required: true, description: 'Required before working unsupervised on the floor.' },
+      { key: 'ppe', title: 'Collect PPE and uniforms', owner: 'manager', kind: 'equipment', dueOffsetDays: 0, required: true, description: 'Boots, hi-vis vest, gloves and hard hat.' },
+      { key: 'badge', title: 'Issue time clock badge', owner: 'hr', kind: 'equipment', dueOffsetDays: 0, required: true, description: 'Assign badge ID and enroll in the site time clock.' },
+      { key: 'handbook', title: 'Acknowledge the employee handbook', owner: 'employee', kind: 'document_sign', dueOffsetDays: 5, required: true, description: 'Signature required.' },
+      { key: 'benefits', title: 'Elect your benefits', owner: 'employee', kind: 'benefits', dueOffsetDays: 30, required: true, description: 'You have 30 days from your hire date to make elections.' },
+      { key: 'shadow', title: 'Complete two supervised shifts', owner: 'manager', kind: 'meeting', dueOffsetDays: 7, required: true, description: 'Pair with a lead before working an unsupervised shift.' },
+      { key: 'payroll_setup', title: 'Add employee to pay group', owner: 'payroll', kind: 'form', dueOffsetDays: 2, required: true, description: 'Confirm pay group, rate and overtime rules.' },
+    ],
+  },
+];
+
+export const AUTOMATION_RULES: AutomationRule[] = [
+  {
+    id: 'auto_ot', name: 'Overtime notification', description: 'Notify the manager when a team member records more than 40 hours in a week.',
+    trigger: 'overtime_recorded', conditions: [{ field: 'weeklyHours', operator: 'gt', value: '40' }],
+    actions: [{ type: 'notify', target: 'manager', template: '{employee} recorded {hours} hours this week ({overtime} overtime).' }],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_pto_balance', name: 'PTO exceeds available balance', description: 'Flag any request for more hours than the employee has accrued.',
+    trigger: 'pto_exceeds_balance', conditions: [{ field: 'requestedHours', operator: 'gt', value: 'availableHours' }],
+    actions: [
+      { type: 'flag', target: 'employee', template: 'Request exceeds available balance by {delta} hours.' },
+      { type: 'notify', target: 'manager', template: '{employee} requested {hours}h but has {available}h available.' },
+    ],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_onb_overdue', name: 'Overdue onboarding task escalation', description: 'Notify the employee and People Ops when a required onboarding task passes its due date.',
+    trigger: 'onboarding_task_overdue', conditions: [{ field: 'required', operator: 'eq', value: 'true' }],
+    actions: [
+      { type: 'notify', target: 'employee', template: 'Your onboarding task "{task}" is overdue.' },
+      { type: 'create_task', target: 'hr', template: 'Follow up with {employee} on overdue onboarding task "{task}".' },
+    ],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_pay_anomaly', name: 'Payroll anomaly review alert', description: 'Create a payroll review item when net pay moves more than 25% against the prior period.',
+    trigger: 'payroll_anomaly', conditions: [{ field: 'netChangePercent', operator: 'gt', value: '25' }],
+    actions: [{ type: 'create_task', target: 'payroll', template: 'Review {employee}: net pay changed {delta}% versus the prior period.' }],
+    enabled: true, createdBy: 'usr_payroll', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_cert_expiry', name: 'Certification expiration reminder', description: 'Notify the employee and manager 45 days before a certification lapses.',
+    trigger: 'certification_expiring', conditions: [{ field: 'daysUntilExpiration', operator: 'lt', value: '45' }],
+    actions: [
+      { type: 'notify', target: 'employee', template: 'Your {certification} expires on {date}.' },
+      { type: 'notify', target: 'manager', template: "{employee}'s {certification} expires on {date}." },
+    ],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_timecard', name: 'Unsubmitted timecard reminder', description: 'Remind hourly employees the day before the pay period closes.',
+    trigger: 'timecard_unsubmitted', conditions: [{ field: 'daysUntilClose', operator: 'lt', value: '2' }],
+    actions: [{ type: 'notify', target: 'employee', template: 'Your timecard for {period} closes tomorrow. Submit it for approval.' }],
+    enabled: true, createdBy: 'usr_payroll', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_training', name: 'Mandatory training escalation', description: 'Escalate to the manager when required training is more than seven days overdue.',
+    trigger: 'training_overdue', conditions: [{ field: 'daysOverdue', operator: 'gt', value: '7' }],
+    actions: [{ type: 'escalate', target: 'manager', template: '{employee} is {days} days overdue on "{course}".' }],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_newhire', name: 'New hire provisioning', description: 'On hire, create the onboarding packet and assign the required course bundle.',
+    trigger: 'new_hire_created', conditions: [],
+    actions: [
+      { type: 'assign_training', target: 'employee', template: 'Assign onboarding and compliance courses to {employee}.' },
+      { type: 'create_task', target: 'manager', template: 'Prepare a 30/60/90 plan for {employee}.' },
+    ],
+    enabled: true, createdBy: 'usr_hr', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_comp', name: 'Compensation change audit', description: 'Record an audit entry and notify Payroll whenever compensation changes.',
+    trigger: 'compensation_changed', conditions: [],
+    actions: [{ type: 'notify', target: 'payroll', template: "{employee}'s compensation changed to {newValue}, effective {date}." }],
+    enabled: true, createdBy: 'usr_sys', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+  {
+    id: 'auto_expense', name: 'Large expense secondary approval', description: 'Route expense reports above $2,500 to Finance after manager approval.',
+    trigger: 'expense_submitted', conditions: [{ field: 'total', operator: 'gt', value: '2500' }],
+    actions: [{ type: 'create_task', target: 'custom', targetId: 'finance', template: 'Secondary approval required for {employee} — {amount}.' }],
+    enabled: true, createdBy: 'usr_fin', createdAt: '', lastFiredAt: null, fireCount: 0,
+  },
+];
+
+export const INTEGRATIONS: Integration[] = [
+  { id: 'int_gl', name: 'General Ledger Sync', category: 'accounting', vendor: 'Ledgerline Accounting', status: 'connected', connectedAt: '2024-02-11T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Every payroll close', direction: 'outbound', description: 'Posts payroll journal entries by cost center and GL account.', scopes: ['journal.write', 'accounts.read'], health: 'healthy' },
+  { id: 'int_bank', name: 'ACH Origination', category: 'banking', vendor: 'Front Range Bank', status: 'connected', connectedAt: '2023-11-02T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Per pay run', direction: 'outbound', description: 'Originates direct deposit files two banking days before each check date.', scopes: ['ach.originate', 'accounts.verify'], health: 'healthy' },
+  { id: 'int_tax', name: 'Payroll Tax Filing', category: 'tax', vendor: 'Statute Tax Services', status: 'connected', connectedAt: '2023-11-02T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Per pay run + quarterly', direction: 'bidirectional', description: 'Files federal, state and local payroll returns and remits deposits.', scopes: ['filings.submit', 'notices.read'], health: 'healthy' },
+  { id: 'int_carrier', name: 'Benefits Carrier Feed', category: 'benefits', vendor: 'Aspen Health Alliance', status: 'connected', connectedAt: '2024-01-08T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Weekly (EDI 834)', direction: 'outbound', description: 'Sends enrollment, change and termination records to carriers.', scopes: ['enrollment.write'], health: 'degraded' },
+  { id: 'int_sso', name: 'Single Sign-On', category: 'identity', vendor: 'Northgate Identity', status: 'connected', connectedAt: '2023-09-14T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Real time (SAML)', direction: 'inbound', description: 'SAML 2.0 SSO with SCIM user provisioning and deprovisioning.', scopes: ['sso.assert', 'scim.provision'], health: 'healthy' },
+  { id: 'int_cal', name: 'Calendar Sync', category: 'calendar', vendor: 'Workspace Calendar', status: 'connected', connectedAt: '2024-03-19T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Real time', direction: 'bidirectional', description: 'Publishes approved time off and interview schedules to work calendars.', scopes: ['calendar.events'], health: 'healthy' },
+  { id: 'int_email', name: 'Transactional Email', category: 'email', vendor: 'Postmarker', status: 'connected', connectedAt: '2023-09-14T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Real time', direction: 'outbound', description: 'Delivers notification, approval and signature-request email.', scopes: ['email.send'], health: 'healthy' },
+  { id: 'int_sms', name: 'SMS Notifications', category: 'sms', vendor: 'Relaywire', status: 'available', connectedAt: null, lastSyncAt: null, syncFrequency: 'Real time', direction: 'outbound', description: 'Shift reminders and urgent approvals by text message.', scopes: ['sms.send'], health: 'n/a' },
+  { id: 'int_bgc', name: 'Background Screening', category: 'background_check', vendor: 'Clearpath Screening', status: 'connected', connectedAt: '2024-05-06T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'On offer acceptance', direction: 'bidirectional', description: 'Orders and retrieves pre-employment screening results.', scopes: ['screening.order', 'screening.read'], health: 'healthy' },
+  { id: 'int_boards', name: 'Job Board Distribution', category: 'job_board', vendor: 'Broadpost Network', status: 'connected', connectedAt: '2024-04-02T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Hourly', direction: 'bidirectional', description: 'Distributes postings to job boards and ingests applications.', scopes: ['postings.write', 'applications.read'], health: 'healthy' },
+  { id: 'int_lms', name: 'External Course Library', category: 'learning', vendor: 'Coursepath', status: 'available', connectedAt: null, lastSyncAt: null, syncFrequency: 'Nightly', direction: 'inbound', description: 'Imports completion records from an external course catalog.', scopes: ['completions.read'], health: 'n/a' },
+  { id: 'int_exp', name: 'Corporate Card Feed', category: 'expense', vendor: 'Front Range Bank', status: 'error', connectedAt: '2024-08-21T16:00:00.000Z', lastSyncAt: null, syncFrequency: 'Daily', direction: 'inbound', description: 'Imports corporate card transactions for expense matching.', scopes: ['transactions.read'], health: 'failing' },
+];
+
+export const PERMISSION_GROUPS: PermissionGroup[] = [
+  { id: 'pgrp_emp', name: 'All Employees', description: 'Baseline self-service access granted to every active employee.', permissions: ['people.view.self', 'people.edit.self', 'time.punch', 'pto.request', 'payroll.view.self'], memberUserIds: [], system: true },
+  { id: 'pgrp_mgr', name: 'People Managers', description: 'Approval authority over direct and indirect reports.', permissions: ['people.view.team', 'time.approve', 'pto.approve', 'schedule.manage', 'expense.approve.team'], memberUserIds: [], system: true },
+  { id: 'pgrp_hr', name: 'HR Administrators', description: 'Full employee record and lifecycle administration.', permissions: ['people.view.all', 'people.edit.all', 'people.lifecycle.manage', 'documents.view.all'], memberUserIds: [], system: true },
+  { id: 'pgrp_pay', name: 'Payroll Team', description: 'Processing, approval and tax administration.', permissions: ['payroll.process', 'payroll.approve', 'payroll.tax.manage', 'payroll.gl.export'], memberUserIds: [], system: true },
+  { id: 'pgrp_audit', name: 'Audit & Compliance', description: 'Read-only access to the audit trail and compliance reporting.', permissions: ['audit.view', 'reports.view.all'], memberUserIds: [], system: false },
+];

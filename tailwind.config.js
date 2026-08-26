@@ -1,0 +1,133 @@
+/** @type {import('tailwindcss').Config} */
+const v = (name) => `rgb(var(${name}) / <alpha-value>)`;
+
+export default {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        // ---- Semantic, theme-aware tokens (see src/index.css) ----
+        bg: v('--c-bg'),
+        surface: v('--c-surface'),
+        raised: v('--c-raised'),
+        sunken: v('--c-sunken'),
+        line: v('--c-line'),
+        'line-strong': v('--c-line-strong'),
+        ink: v('--c-ink'),
+        muted: v('--c-muted'),
+        faint: v('--c-faint'),
+        shell: v('--c-shell'),
+        'shell-2': v('--c-shell-2'),
+        'shell-ink': v('--c-shell-ink'),
+        'shell-muted': v('--c-shell-muted'),
+
+        // ---- Meridian brand: violet-indigo ----
+        brand: {
+          50: '#F2F0FE',
+          100: '#E6E2FD',
+          200: '#CFC7FA',
+          300: '#B0A3F5',
+          400: '#8C79EE',
+          500: '#6E56E4',
+          600: '#5B3FD6',
+          700: '#4A31B3',
+          800: '#3A288C',
+          900: '#2B1F68',
+          950: '#1B1442',
+          DEFAULT: '#5B3FD6',
+        },
+        // ---- Secondary: deep teal ----
+        teal: {
+          50: '#EAF7F8',
+          100: '#D0EDEF',
+          200: '#A3DBE0',
+          300: '#6FC3CB',
+          400: '#3EA5B0',
+          500: '#1B8894',
+          600: '#0E7C86',
+          700: '#0B626B',
+          800: '#0A4E56',
+          900: '#093F46',
+          DEFAULT: '#0E7C86',
+        },
+        // ---- Accent: warm amber ----
+        accent: {
+          50: '#FEF6EA',
+          100: '#FDEAD0',
+          200: '#FAD3A2',
+          300: '#F7BA6E',
+          400: '#F4A845',
+          500: '#F2A13B',
+          600: '#D8811C',
+          700: '#AF6415',
+          800: '#8B4F14',
+          900: '#6F4114',
+          DEFAULT: '#F2A13B',
+        },
+        success: {
+          50: '#E9F7F2',
+          100: '#CCEDE1',
+          300: '#79CFB2',
+          500: '#17876A',
+          600: '#136F58',
+          700: '#0F5946',
+          DEFAULT: '#17876A',
+        },
+        warning: {
+          50: '#FDF5E4',
+          100: '#F9E8BF',
+          300: '#E9C463',
+          500: '#B67A05',
+          600: '#976404',
+          700: '#7A5104',
+          DEFAULT: '#B67A05',
+        },
+        danger: {
+          50: '#FDEDEF',
+          100: '#F9D6DB',
+          300: '#EE96A3',
+          500: '#CE3F55',
+          600: '#AF3245',
+          700: '#8D2837',
+          DEFAULT: '#CE3F55',
+        },
+        info: {
+          50: '#EDF2FD',
+          100: '#D8E2FB',
+          300: '#9BB4F2',
+          500: '#3A63D0',
+          600: '#2F51AE',
+          700: '#26428D',
+          DEFAULT: '#3A63D0',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
+      boxShadow: {
+        card: '0 1px 2px 0 rgb(16 18 40 / 0.04), 0 1px 3px 0 rgb(16 18 40 / 0.06)',
+        raised: '0 4px 12px -2px rgb(16 18 40 / 0.10), 0 2px 6px -2px rgb(16 18 40 / 0.06)',
+        pop: '0 16px 40px -12px rgb(16 18 40 / 0.28), 0 4px 12px -4px rgb(16 18 40 / 0.12)',
+        focus: '0 0 0 3px rgb(91 63 214 / 0.28)',
+      },
+      borderRadius: { xl: '0.75rem', '2xl': '1rem' },
+      keyframes: {
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'slide-up': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        'slide-left': { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
+      },
+      animation: {
+        'fade-in': 'fade-in 140ms ease-out',
+        'slide-up': 'slide-up 180ms cubic-bezier(0.22,1,0.36,1)',
+        'slide-left': 'slide-left 220ms cubic-bezier(0.22,1,0.36,1)',
+        shimmer: 'shimmer 1.6s infinite',
+      },
+    },
+  },
+  plugins: [],
+};
