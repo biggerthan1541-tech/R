@@ -36,12 +36,22 @@ export const upcomingShifts = (db: Database, employeeId: ID, from: ISODate, days
 
 export const ptoSummary = (db: Database, employeeId: ID) => {
   const kinds: PtoKind[] = ['vacation', 'sick', 'personal'];
+  const employee = db.employees.find((e) => e.id === employeeId);
+  const policy = db.ptoPolicies.find((p) => p.id === employee?.ptoPolicyId);
+  const unlimited = policy?.accrualMethod === 'unlimited';
   return kinds.map((kind) => {
     const b = db.ptoBalances.find((x) => x.employeeId === employeeId && x.kind === kind);
     const accrued = b ? round2(b.accruedHours + b.carryoverHours) : 0;
     const used = b?.usedHours ?? 0;
     const pending = b?.pendingHours ?? 0;
-    return { kind, accrued, used, pending, available: round2(accrued - used - pending) };
+    return {
+      kind,
+      accrued,
+      used,
+      pending,
+      unlimited,
+      available: unlimited ? Infinity : round2(accrued - used - pending),
+    };
   });
 };
 

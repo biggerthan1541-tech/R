@@ -1,138 +1,169 @@
 # CLAUDE.md
 
-This file documents the repository, development conventions, and environment context for AI assistants (Claude Code and others) working in this codebase.
+Repository, conventions and environment context for AI assistants working in
+this codebase.
 
 ---
 
-## Repository State
+## What this repository is
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+**Meridian HCM** — an all-in-one Human Capital Management platform covering the
+full employee lifecycle. It is an original product with its own brand, design
+system and code. See `README.md` for the product overview, module list, payroll
+engine explanation and access-control model.
+
+Single-page React application, no backend. The demo organization is generated
+deterministically in the browser and persisted to IndexedDB.
 
 ---
 
 ## Environment
 
-This project runs in a **Claude Code on the Web** remote execution environment (ephemeral container). Important implications:
+Runs in a **Claude Code on the Web** remote container:
 
-- The working directory is `/home/user/R`.
-- The container is discarded after inactivity — **always commit and push before ending a session**.
-- Outbound network is available for package installs, API calls, and git operations.
-- No `gh` CLI is available; use the `mcp__github__*` MCP tools for all GitHub interactions.
+- Working directory is `/home/user/R`.
+- The container is discarded after inactivity — **commit and push before ending
+  a session**.
+- Outbound network is available for package installs and git.
+- No `gh` CLI; use the `mcp__github__*` MCP tools for GitHub interactions.
+- Chromium is pre-installed at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`.
+  Playwright works if launched with that `executablePath`; do not run
+  `playwright install`.
 
 ---
 
-## Git Workflow
+## Commands
+
+```bash
+npm install
+npm run dev        # Vite dev server on :5173
+npm run build      # tsc project build + production bundle
+npm run lint       # TypeScript check only (no ESLint configured)
+```
+
+`npm run lint` is the fast correctness gate — the config uses
+`noUnusedLocals` and `noUnusedParameters`, so unused imports fail the build.
+Run it after every change.
+
+---
+
+## Project structure
+
+```
+src/
+├── lib/
+│   ├── types.ts          Domain model — the source of truth for every entity
+│   ├── permissions.ts    Roles, permission catalog, data-scope resolution
+│   ├── payroll.ts        Gross-to-net calculation engine
+│   ├── validation.ts     Pre-commit payroll validation rules
+│   ├── store.tsx         AppProvider: session, persistence, audit, automation
+│   ├── actions.ts        All state-changing workflows (useActions and friends)
+│   ├── selectors.ts      Pure derived reads shared across modules
+│   ├── assistant.ts      Intent handlers for the natural-language assistant
+│   ├── storage.ts        IndexedDB → local storage → memory persistence
+│   ├── dates.ts          Local-safe ISO date helpers
+│   ├── format.ts         Currency, number, CSV and download helpers
+│   └── seed/             Deterministic demo data generator
+├── components/
+│   ├── ui.tsx            The complete UI kit
+│   ├── charts.tsx        Hand-built SVG chart library
+│   └── Brand.tsx         Logo mark and wordmark
+├── app/                  Shell, nav config, command palette, login, error boundary
+└── pages/                One file per module
+```
+
+---
+
+## Conventions that matter here
+
+### State changes go through `actions.ts`
+
+Never mutate the database from a component. Use the hooks in `src/lib/actions.ts`
+(`useActions`, `usePayrollActions`, `usePeopleActions`, `useTalentActions`,
+`useAdminActions`). They exist so that audit entries, notifications, task queues
+and automation rules fire consistently regardless of which screen triggered the
+change. Adding a workflow means adding an action there, not inline `update()`
+calls in a page.
+
+`update(mutator, auditEntry)` mutates the draft in place and swaps the top-level
+reference to trigger a render. Pass an audit entry for anything a user would
+expect to find in the audit log.
+
+### Permissions are checked before data is read
+
+Call `can(...perms)` for capability checks and `visibleIds(module)` for the set
+of employee ids the viewer may see. Filter *then* aggregate — never compute over
+everything and hide the result. Modules that a role cannot reach render
+`<PermissionDenied />` rather than an empty state.
+
+### Design tokens, not raw colours
+
+Use the semantic Tailwind tokens (`bg`, `surface`, `sunken`, `line`, `ink`,
+`muted`, `faint`, plus the `brand`/`teal`/`accent`/`success`/`warning`/`danger`
+scales). They are CSS custom properties defined in `src/index.css`, which is
+what makes the dark theme work. Chart series must use `seriesColor(i)` from
+`components/charts.tsx` — that palette is validated for colour-vision
+separation, and adding an ad-hoc colour breaks the guarantee.
+
+### Code style
+
+- No comments unless the *why* is non-obvious.
+- Match the density and idiom of the surrounding file.
+- Validate at boundaries only; trust internal guarantees.
+- Fix what was asked; three similar lines beat a premature abstraction.
+- No emojis unless requested.
+
+### Seed data
+
+`src/lib/seed/` is deterministic (fixed RNG seed) so a reset reproduces the same
+organization. It must also be **date-independent** — the dataset is generated
+relative to "today", so anything anchored to a specific calendar window has to
+work on any day. The in-flight payroll run, for example, is derived from the
+most recently closed pay period rather than a check-date comparison.
+
+Changing the seed shape means bumping `DB_VERSION` in `src/lib/seed/index.ts`,
+otherwise stored databases from earlier sessions load against new code.
+
+---
+
+## Git workflow
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Development branch | `claude/complete-hcm-platform-kke8lz` |
 | Push command | `git push -u origin <branch>` |
-| Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
-| PRs | Only create a PR when the user explicitly asks for one |
-| Force-push / destructive ops | Never without explicit user instruction |
-| Commit message style | Imperative mood, ≤72 chars subject, body explains *why* not *what* |
-| Secrets | Never commit `.env`, credentials, or API keys |
+| Push failures | Retry up to 4 times with exponential back-off (2s → 4s → 8s → 16s) |
+| Pull requests | Only when the user explicitly asks |
+| Force-push / destructive ops | Never without explicit instruction |
+| Commit subject | Imperative mood, ≤72 characters |
+| Commit body | Explain *why*, not *what* |
+| Secrets | Never commit `.env`, credentials or API keys |
 
-Always append the session URL to commit messages:
+Append the session URL to commit messages:
 
 ```
 <subject line>
+
+<body explaining why>
 
 https://claude.ai/code/session_<id>
 ```
 
 ---
 
-## MCP Integrations
+## Verifying changes
 
-Three MCP servers are connected to this environment in addition to the built-in GitHub server. Use `ToolSearch` to load a tool's schema before calling it.
-
-### 1. GitHub (`mcp__github__*`)
-Full GitHub API access scoped to `biggerthan1541-tech/R`.
-
-Key tools: `get_file_contents`, `push_files`, `create_pull_request`, `list_commits`, `list_branches`, `create_branch`, `add_issue_comment`, `search_code`, `pull_request_read`, `subscribe_pr_activity`.
-
-> Use these for **all** GitHub interactions — never use `gh` CLI.
-
-### 2. Canva (`mcp__06a5efe3-*`)
-Design generation, editing, and asset management via the Canva API.
-
-Key tools: `generate-design`, `generate-design-structured`, `create-design-from-brand-template`, `export-design`, `get-design`, `get-design-content`, `perform-editing-operations`, `start-editing-transaction` / `commit-editing-transaction` / `cancel-editing-transaction`, `upload-asset-from-url`, `list-brand-kits`, `search-designs`.
-
-**Editing transaction pattern** — always wrap multi-step design edits in a transaction:
-1. `start-editing-transaction`
-2. `perform-editing-operations` (one or more)
-3. `commit-editing-transaction` (or `cancel-editing-transaction` on error)
-
-### 3. Runway / Media Generation (`mcp__b1e7c311-*`)
-AI image and video generation, plus virality prediction.
-
-Key tools: `generate_image`, `generate_video`, `virality_predictor`, `media_upload` + `media_confirm` (for local files), `job_display`, `show_generations`, `models_explore`, `balance`, `transactions`.
-
-**Local file workflow** — when working with a local video/image file, always call `media_upload` then `media_confirm` before passing the asset to generation or analysis tools.
-
-**Virality predictor** — use when the user asks to predict engagement, attention, audience response, retention risk, hook strength, or creative performance of a video.
-
-### 4. File Service (`mcp__f62d915c-*`)
-Cloud file storage (likely Google Drive) for reading, creating, downloading, and searching files.
-
-Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_file`, `list_recent_files`, `search_files`, `get_file_metadata`, `get_file_permissions`.
+1. `npm run lint` — catches unused imports and type errors.
+2. `npm run build` — confirms the production bundle compiles.
+3. For UI work, drive the real app with Playwright and look at the result.
+   Log in through the persona picker, navigate, and collect `pageerror` and
+   `console.error` events; a screenshot that renders is not the same as a screen
+   without runtime errors.
 
 ---
 
-## Development Conventions
+## MCP integrations available
 
-> These are defaults. Override them in this file once the project has an established stack.
-
-### Code Style
-- No comments unless the *why* is non-obvious (a subtle invariant, a workaround, a hidden constraint).
-- No docstrings beyond a single short line where required by tooling.
-- No emojis unless the user explicitly requests them.
-
-### Error Handling
-- Validate only at system boundaries (user input, external APIs). Trust framework/internal guarantees.
-- Do not add fallbacks for scenarios that cannot happen.
-
-### Security
-- No command injection, XSS, SQL injection, or other OWASP Top 10 issues.
-- No secrets in source; use environment variables loaded from outside the repo.
-
-### Scope Discipline
-- Fix what was asked; don't refactor or add abstractions beyond the task.
-- Three similar lines is better than a premature abstraction.
-- No half-finished implementations or feature flags for hypothetical future requirements.
-
----
-
-## Running & Testing
-
-> To be filled in once the project has a build system and test runner.
-
-```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
-
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
-```
-
----
-
-## Project Structure
-
-> To be filled in as the codebase grows.
-
-```
-R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
-```
-
----
-
-## Updating This File
-
-Whenever a significant convention is established (new framework chosen, test runner added, directory structure decided), update the relevant section here **in the same commit** that introduces the change.
+Beyond the GitHub server, this environment may expose Canva design tools, media
+generation, calendar and cloud file storage. Load tool schemas with `ToolSearch`
+before calling them. None of them are required to build or run this project.

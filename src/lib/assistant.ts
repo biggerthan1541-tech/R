@@ -135,21 +135,34 @@ const ptoBalance: Handler = (ctx, q) => {
     return denied(`${nameOf(target)}'s balances`);
   }
   const balances = ctx.db.ptoBalances.filter((b) => b.employeeId === target.id);
+  const policy = ctx.db.ptoPolicies.find((p) => p.id === target.ptoPolicyId);
+  const unlimited = policy?.accrualMethod === 'unlimited';
+  const who = target.id === ctx.viewer?.id ? 'You are' : `${nameOf(target)} is`;
+  const has = target.id === ctx.viewer?.id ? 'You have' : `${nameOf(target)} has`;
+  const available = balances.reduce((s, b) => s + b.accruedHours + b.carryoverHours - b.usedHours - b.pendingHours, 0);
+
   return {
-    headline: `${target.id === ctx.viewer?.id ? 'You have' : `${nameOf(target)} has`} ${num(balances.reduce((s, b) => s + b.accruedHours + b.carryoverHours - b.usedHours - b.pendingHours, 0), 1)} hours of time off available.`,
-    stats: balances.map((b) => ({
+    headline: unlimited
+      ? `${who} on the ${policy?.name} policy — flexible time off with no fixed balance.`
+      : `${has} ${num(available, 1)} hours of time off available.`,
+    detail: unlimited
+      ? `${num(balances.reduce((s, b) => s + b.usedHours, 0), 1)} hours taken so far this year. Requests still route to a manager for coverage.`
+      : undefined,
+    stats: unlimited ? undefined : balances.map((b) => ({
       label: b.kind.replace(/_/g, ' '),
       value: `${num(b.accruedHours + b.carryoverHours - b.usedHours - b.pendingHours, 1)}h`,
     })),
     table: {
-      columns: ['Type', 'Accrued', 'Used', 'Pending', 'Available'],
-      rows: balances.map((b) => [
-        b.kind.replace(/_/g, ' '),
-        num(b.accruedHours + b.carryoverHours, 1),
-        num(b.usedHours, 1),
-        num(b.pendingHours, 1),
-        num(b.accruedHours + b.carryoverHours - b.usedHours - b.pendingHours, 1),
-      ]),
+      columns: unlimited ? ['Type', 'Taken', 'Pending'] : ['Type', 'Accrued', 'Used', 'Pending', 'Available'],
+      rows: balances.map((b) => (unlimited
+        ? [b.kind.replace(/_/g, ' '), num(b.usedHours, 1), num(b.pendingHours, 1)]
+        : [
+            b.kind.replace(/_/g, ' '),
+            num(b.accruedHours + b.carryoverHours, 1),
+            num(b.usedHours, 1),
+            num(b.pendingHours, 1),
+            num(b.accruedHours + b.carryoverHours - b.usedHours - b.pendingHours, 1),
+          ])),
     },
     path: { label: 'Open time off', to: '/time-off' },
   };

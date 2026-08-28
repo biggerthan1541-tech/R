@@ -547,11 +547,19 @@ const PtoCard = () => {
           <li key={s.kind}>
             <div className="flex items-baseline justify-between">
               <span className="text-xs capitalize text-muted">{s.kind}</span>
-              <span className="tnum text-sm font-semibold">{num(s.available, 1)}<span className="text-xs font-normal text-faint">h available</span></span>
+              {s.unlimited ? (
+                <span className="text-sm font-semibold text-teal-700">Flexible</span>
+              ) : (
+                <span className="tnum text-sm font-semibold">{num(s.available, 1)}<span className="text-xs font-normal text-faint">h available</span></span>
+              )}
             </div>
-            <Progress className="mt-1" value={s.accrued ? ((s.accrued - s.available) / s.accrued) * 100 : 0} tone={s.available < 8 ? 'warning' : 'teal'} size="sm" />
+            {s.unlimited ? null : (
+              <Progress className="mt-1" value={s.accrued ? ((s.accrued - s.available) / s.accrued) * 100 : 0} tone={s.available < 8 ? 'warning' : 'teal'} size="sm" />
+            )}
             <p className="mt-1 text-2xs text-faint">
-              {num(s.accrued, 1)}h accrued · {num(s.used, 1)}h used{s.pending ? ` · ${num(s.pending, 1)}h pending` : ''}
+              {s.unlimited
+                ? `${num(s.used, 1)}h taken this year · no fixed accrual`
+                : `${num(s.accrued, 1)}h accrued · ${num(s.used, 1)}h used${s.pending ? ` · ${num(s.pending, 1)}h pending` : ''}`}
             </p>
           </li>
         ))}

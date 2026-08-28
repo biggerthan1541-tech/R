@@ -88,12 +88,21 @@ const MyTimeOff = () => {
           {summary.map((s) => (
             <Card key={s.kind}>
               <p className="text-xs capitalize text-faint">{s.kind}</p>
-              <p className="tnum mt-1 text-2xl font-semibold">{num(s.available, 1)}<span className="text-sm font-normal text-muted">h</span></p>
-              <Progress className="mt-2" size="sm" tone={s.available < 8 ? 'warning' : 'teal'}
-                value={s.accrued ? ((s.accrued - s.available) / s.accrued) * 100 : 0} />
-              <p className="mt-1.5 text-2xs text-faint">
-                {num(s.accrued, 1)}h accrued · {num(s.used, 1)}h used{s.pending ? ` · ${num(s.pending, 1)}h pending` : ''}
-              </p>
+              {s.unlimited ? (
+                <>
+                  <p className="mt-1 text-2xl font-semibold text-teal-700">Flexible</p>
+                  <p className="mt-2.5 text-2xs text-faint">{num(s.used, 1)}h taken this year · no fixed accrual</p>
+                </>
+              ) : (
+                <>
+                  <p className="tnum mt-1 text-2xl font-semibold">{num(s.available, 1)}<span className="text-sm font-normal text-muted">h</span></p>
+                  <Progress className="mt-2" size="sm" tone={s.available < 8 ? 'warning' : 'teal'}
+                    value={s.accrued ? ((s.accrued - s.available) / s.accrued) * 100 : 0} />
+                  <p className="mt-1.5 text-2xs text-faint">
+                    {num(s.accrued, 1)}h accrued · {num(s.used, 1)}h used{s.pending ? ` · ${num(s.pending, 1)}h pending` : ''}
+                  </p>
+                </>
+              )}
             </Card>
           ))}
         </div>

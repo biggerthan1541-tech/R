@@ -183,6 +183,8 @@ const REPORTS: ReportDef[] = [
       .filter((b) => {
         const e = l.employee.get(b.employeeId);
         if (!e || e.status === 'terminated') return false;
+        // Flexible policies accrue nothing, so they carry no balance-sheet liability.
+        if (db.ptoPolicies.find((p) => p.id === e.ptoPolicyId)?.accrualMethod === 'unlimited') return false;
         return f.departmentId === 'all' || e.departmentId === f.departmentId;
       })
       .map((b) => {

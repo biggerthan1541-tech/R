@@ -222,9 +222,13 @@ const OverviewTab = ({ emp, canSeeSensitive }: { emp: import('@/lib/types').Empl
               <li key={p.kind}>
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs capitalize text-muted">{p.kind}</span>
-                  <span className="tnum text-sm font-semibold">{num(p.available, 1)}h</span>
+                  <span className={cx('text-sm font-semibold', p.unlimited ? 'text-teal-700' : 'tnum')}>
+                    {p.unlimited ? 'Flexible' : `${num(p.available, 1)}h`}
+                  </span>
                 </div>
-                <Progress className="mt-1" size="sm" tone="teal" value={p.accrued ? ((p.accrued - p.available) / p.accrued) * 100 : 0} />
+                {p.unlimited ? null : (
+                  <Progress className="mt-1" size="sm" tone="teal" value={p.accrued ? ((p.accrued - p.available) / p.accrued) * 100 : 0} />
+                )}
               </li>
             ))}
           </ul>
@@ -475,10 +479,18 @@ const TimeOffTab = ({ emp }: { emp: import('@/lib/types').Employee }) => {
               <li key={b.kind}>
                 <div className="flex items-baseline justify-between">
                   <span className="text-xs capitalize text-muted">{b.kind}</span>
-                  <span className="tnum text-sm font-semibold">{num(b.available, 1)}h</span>
+                  <span className={cx('text-sm font-semibold', b.unlimited ? 'text-teal-700' : 'tnum')}>
+                    {b.unlimited ? 'Flexible' : `${num(b.available, 1)}h`}
+                  </span>
                 </div>
-                <Progress className="mt-1" size="sm" tone="teal" value={b.accrued ? ((b.accrued - b.available) / b.accrued) * 100 : 0} />
-                <p className="mt-1 text-2xs text-faint">{num(b.accrued, 1)}h accrued · {num(b.used, 1)}h used · {num(b.pending, 1)}h pending</p>
+                {b.unlimited ? null : (
+                  <Progress className="mt-1" size="sm" tone="teal" value={b.accrued ? ((b.accrued - b.available) / b.accrued) * 100 : 0} />
+                )}
+                <p className="mt-1 text-2xs text-faint">
+                  {b.unlimited
+                    ? `${num(b.used, 1)}h taken · no fixed accrual`
+                    : `${num(b.accrued, 1)}h accrued · ${num(b.used, 1)}h used · ${num(b.pending, 1)}h pending`}
+                </p>
               </li>
             ))}
           </ul>
