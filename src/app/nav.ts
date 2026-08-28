@@ -9,6 +9,8 @@ import type { Permission } from '@/lib/permissions';
 export interface NavItem {
   to: string;
   label: string;
+  /** Compact label for the mobile tab bar, where space is tight. */
+  short?: string;
   icon: React.ComponentType<{ className?: string }>;
   /** Any one of these permissions grants visibility. */
   perms: Permission[];
@@ -26,7 +28,7 @@ export const NAV: NavGroup[] = [
     id: 'home',
     label: 'Overview',
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard, perms: ['people.view.self'] },
+      { to: '/', label: 'Dashboard', short: 'Home', icon: LayoutDashboard, perms: ['people.view.self'] },
       { to: '/assistant', label: 'Meridian Assistant', icon: Bot, perms: ['people.view.self'] },
     ],
   },
@@ -44,9 +46,9 @@ export const NAV: NavGroup[] = [
     id: 'time',
     label: 'Time',
     items: [
-      { to: '/time', label: 'Time & Attendance', icon: Clock, perms: ['time.view.self', 'time.view.team', 'time.view.all'], badge: 'approvals' },
-      { to: '/scheduling', label: 'Scheduling', icon: CalendarDays, perms: ['schedule.view.self', 'schedule.view.team', 'schedule.view.all'] },
-      { to: '/time-off', label: 'Time Off', icon: Plane, perms: ['pto.request', 'pto.view.team', 'pto.view.all'] },
+      { to: '/time', label: 'Time & Attendance', short: 'Time', icon: Clock, perms: ['time.view.self', 'time.view.team', 'time.view.all'], badge: 'approvals' },
+      { to: '/scheduling', label: 'Scheduling', short: 'Schedule', icon: CalendarDays, perms: ['schedule.view.self', 'schedule.view.team', 'schedule.view.all'] },
+      { to: '/time-off', label: 'Time Off', short: 'Time off', icon: Plane, perms: ['pto.request', 'pto.view.team', 'pto.view.all'] },
     ],
   },
   {

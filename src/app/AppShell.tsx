@@ -387,7 +387,7 @@ const MobileTabBar = () => {
                     </span>
                   ) : null}
                 </span>
-                {item.label.split(' ')[0]}
+                {item.short ?? item.label.split(' ')[0]}
               </NavLink>
             </li>
           );

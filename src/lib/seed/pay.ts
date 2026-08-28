@@ -156,8 +156,10 @@ export const seedPayroll = (
       .sort((a, b) => a.start.localeCompare(b.start));
     const detailFrom = Math.max(0, closed.length - 6);
 
+    // The most recently closed period is always mid-process, so the validation
+    // workflow is populated no matter which calendar day the demo is opened on.
     closed.forEach((period, idx) => {
-      const isInFlight = idx === closed.length - 1 && period.checkDate >= today;
+      const isInFlight = idx === closed.length - 1;
       const staff = employees.filter(
         (e) => e.payGroupId === pg.id && e.status !== 'pending_hire' &&
           e.hireDate <= period.end &&

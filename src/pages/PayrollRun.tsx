@@ -294,7 +294,13 @@ const Overview = ({ run, checks, counts }: { run: PayrollRun; checks: Paycheck[]
         <Card>
           <CardHeader title="Validation summary" icon={ShieldCheck} />
           {counts.total === 0 ? (
-            <EmptyState compact icon={ShieldCheck} title="Not yet validated" body="Run validation once the payroll is calculated." />
+            <EmptyState
+              compact icon={ShieldCheck}
+              title={['finalized', 'paid'].includes(run.status) ? 'Cleared validation' : 'Not yet validated'}
+              body={['finalized', 'paid'].includes(run.status)
+                ? 'This run was validated and closed with no outstanding findings.'
+                : 'Run validation once the payroll is calculated.'}
+            />
           ) : (
             <ul className="space-y-2.5">
               {[
@@ -311,13 +317,19 @@ const Overview = ({ run, checks, counts }: { run: PayrollRun; checks: Paycheck[]
             </ul>
           )}
           <div className="mt-4 rounded-lg border border-line bg-sunken p-3">
-            <p className="text-xs font-medium">{counts.blocking ? 'Blocked' : counts.total ? 'Ready to advance' : 'Awaiting validation'}</p>
+            <p className="text-xs font-medium">
+              {counts.blocking ? 'Blocked'
+                : ['finalized', 'paid'].includes(run.status) ? 'Closed'
+                : counts.total ? 'Ready to advance' : 'Awaiting validation'}
+            </p>
             <p className="mt-1 text-2xs text-muted">
               {counts.blocking
                 ? 'Errors must be resolved before this run can be approved.'
-                : counts.total
-                  ? 'No blocking errors. Warnings and review items are advisory.'
-                  : 'Validation has not run against this calculation yet.'}
+                : ['finalized', 'paid'].includes(run.status)
+                  ? 'The pay period is closed and the underlying timecards are locked.'
+                  : counts.total
+                    ? 'No blocking errors. Warnings and review items are advisory.'
+                    : 'Validation has not run against this calculation yet.'}
             </p>
           </div>
         </Card>

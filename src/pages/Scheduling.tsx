@@ -73,6 +73,7 @@ const ScheduleBoard = () => {
   const [loc, setLoc] = useState('all');
   const [editing, setEditing] = useState<Partial<Shift> | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [onlyScheduled, setOnlyScheduled] = useState(true);
 
   const manage = can('schedule.manage');
   const scope = visibleIds('schedule');
@@ -103,6 +104,10 @@ const ScheduleBoard = () => {
 
   const shiftFor = (empId: string | null, date: string) =>
     shiftsInRange.filter((s) => s.employeeId === empId && s.date === date);
+
+  // Corporate staff without shifts would otherwise pad the board with empty rows.
+  const rosterIds = new Set(shiftsInRange.map((s) => s.employeeId).filter(Boolean) as string[]);
+  const roster = onlyScheduled && manage ? staff.filter((e) => rosterIds.has(e.id)) : staff;
 
   const draftCount = shiftsInRange.filter((s) => s.status === 'draft').length;
   const weekHours = (empId: string) =>
@@ -145,6 +150,14 @@ const ScheduleBoard = () => {
               options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
             {manage ? (
               <>
+                <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted">
+                  <input
+                    type="checkbox" checked={onlyScheduled}
+                    onChange={(e) => setOnlyScheduled(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-[#5B3FD6]"
+                  />
+                  Only scheduled staff
+                </label>
                 <Button size="sm" icon={Plus} onClick={() => setEditing({ date: days[0], departmentId: dept === 'all' ? 'dep_whs' : dept, locationId: loc === 'all' ? 'loc_phx' : loc })}>
                   Add shift
                 </Button>
@@ -176,9 +189,9 @@ const ScheduleBoard = () => {
                 </tr>
               </thead>
               <tbody>
-                {staff.length === 0 ? (
-                  <tr><td colSpan={days.length + 1}><EmptyState icon={Users} title="No employees match these filters" /></td></tr>
-                ) : staff.map((emp) => {
+                {roster.length === 0 ? (
+                  <tr><td colSpan={days.length + 1}><EmptyState icon={Users} title="No scheduled employees in this view" body="Clear a filter, or turn off &quot;only scheduled&quot; to add shifts for anyone." /></td></tr>
+                ) : roster.map((emp) => {
                   const hrs = weekHours(emp.id);
                   return (
                     <tr key={emp.id}>
@@ -260,7 +273,7 @@ const ScheduleBoard = () => {
           <Card>
             <p className="text-xs text-faint">Overtime risk</p>
             <p className="tnum mt-1 text-2xl font-semibold text-warning-600">
-              {staff.filter((e) => weekHours(e.id) > 40).length}
+              {roster.filter((e) => weekHours(e.id) > 40).length}
             </p>
             <p className="mt-0.5 text-2xs text-faint">employees above 40 scheduled hours</p>
           </Card>
