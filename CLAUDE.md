@@ -6,7 +6,7 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository holds a **Miami SMB lead finder**: a Python script that queries the Google Places API (New) for small and medium businesses in Miami and extracts each one's public contact email from its own website. Stack is Python 3.11 with `requests` as the only dependency.
 
 ---
 
@@ -25,7 +25,7 @@ This project runs in a **Claude Code on the Web** remote execution environment (
 
 | Concern | Rule |
 |---|---|
-| Default dev branch | `claude/claude-md-docs-G2uU6` (update when project matures) |
+| Default dev branch | `claude/miami-smb-google-maps-emails-w4tavx` |
 | Push command | `git push -u origin <branch>` |
 | Push failures | Retry up to 4 times with exponential back-off (2 s → 4 s → 8 s → 16 s) |
 | PRs | Only create a PR when the user explicitly asks for one |
@@ -109,15 +109,13 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 > To be filled in once the project has a build system and test runner.
 
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+pip install -r requirements.txt
 
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+export GOOGLE_MAPS_API_KEY="your-key"   # Places API (New), billing enabled
+python3 find_leads.py --limit 100 --out miami_smb_leads.csv --verbose
 ```
+
+No test suite yet. `find_leads.py` exits with a clear message when the API key is missing.
 
 ---
 
@@ -127,8 +125,10 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md          ← this file
+├── README.md          ← setup, flags, cost, and outreach-compliance notes
+├── find_leads.py      ← Places search → website crawl → CSV of leads
+└── requirements.txt   ← requests
 ```
 
 ---
