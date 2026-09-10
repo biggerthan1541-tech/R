@@ -6,7 +6,7 @@ This file documents the repository, development conventions, and environment con
 
 ## Repository State
 
-This repository (`biggerthan1541-tech/R`) is currently **bootstrapped but empty** — no source files or framework have been committed yet. As the project takes shape, update the relevant sections below to reflect actual structure, stack, and conventions.
+This repository (`biggerthan1541-tech/R`) holds **`miami_leads.py`**, a two-stage lead builder: Google Places (New) Text Search for Miami-Dade SMBs, then a website crawl for public contact emails. Stack is Python 3.11 + `requests`; there is no framework, build system, or test runner yet.
 
 ---
 
@@ -109,27 +109,33 @@ Key tools: `create_file`, `read_file_content`, `download_file_content`, `copy_fi
 > To be filled in once the project has a build system and test runner.
 
 ```bash
-# Install dependencies (example — update when stack is decided)
-# npm install  |  pip install -r requirements.txt  |  etc.
+pip install -r requirements.txt
+export GOOGLE_MAPS_API_KEY="..."
 
-# Run tests
-# npm test  |  pytest  |  etc.
-
-# Start dev server
-# npm run dev  |  python main.py  |  etc.
+python3 miami_leads.py collect              # -> businesses.jsonl
+python3 miami_leads.py enrich --limit 100   # -> miami_smb_leads.csv
 ```
+
+No test runner yet. `is_smb()` and `clean_emails()` are pure functions and are the
+right place to start if one is added.
+
+**Network note:** this container's egress proxy allows `*.googleapis.com` but denies
+the open web, so stage 2 (`enrich`) cannot run here — it needs an environment with
+general outbound HTTPS.
 
 ---
 
 ## Project Structure
 
-> To be filled in as the codebase grows.
-
 ```
 R/
-├── CLAUDE.md        ← this file
-└── ...              ← add structure here as it develops
+├── CLAUDE.md          ← this file
+├── README.md          ← usage, cost, and compliance notes
+├── miami_leads.py     ← collect (Places API) + enrich (email scrape)
+└── requirements.txt
 ```
+
+Generated data (`businesses.jsonl`, `*.csv`) is intentionally not committed.
 
 ---
 
