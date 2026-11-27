@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Meridian design tokens.
+  Light theme is the enterprise default; dark theme is a full re-map of the
+  same semantic slots so every component follows automatically.
+*/
+@layer base {
+  :root {
+    --c-bg: 245 246 251;          /* #F5F6FB page canvas   */
+    --c-surface: 255 255 255;     /* cards, tables         */
+    --c-raised: 255 255 255;      /* modals, popovers      */
+    --c-sunken: 248 248 252;      /* table headers, wells  */
+    --c-line: 229 230 240;
+    --c-line-strong: 209 211 226;
+    --c-ink: 22 23 43;            /* primary text          */
+    --c-muted: 92 96 122;         /* secondary text        */
+    --c-faint: 134 138 163;       /* tertiary text         */
+    --c-shell: 36 28 74;          /* nav rail              */
+    --c-shell-2: 47 37 94;
+    --c-shell-ink: 244 243 253;
+    --c-shell-muted: 176 170 214;
+
+    /* Categorical series — validated for CVD separation on a white surface */
+    --chart-1: #6247E0;
+    --chart-2: #C77014;
+    --chart-3: #0E96A4;
+    --chart-4: #9C2E86;
+    --chart-5: #5CA33F;
+    --chart-6: #3667C9;
+    --chart-grid: 229 230 240;
+    --chart-axis: 134 138 163;
+    --chart-good: #17876A;
+    --chart-warn: #B67A05;
+    --chart-bad: #CE3F55;
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    --c-bg: 13 14 26;
+    --c-surface: 22 23 38;
+    --c-raised: 28 30 48;
+    --c-sunken: 18 19 33;
+    --c-line: 39 41 62;
+    --c-line-strong: 55 58 83;
+    --c-ink: 234 235 246;
+    --c-muted: 165 169 194;
+    --c-faint: 126 131 158;
+    --c-shell: 17 18 32;
+    --c-shell-2: 24 25 43;
+    --c-shell-ink: 234 235 246;
+    --c-shell-muted: 150 152 182;
+
+    /* Dark steps are selected, not flipped — validated against #161726 */
+    --chart-1: #8067EC;
+    --chart-2: #C57C22;
+    --chart-3: #20A5B1;
+    --chart-4: #A63A88;
+    --chart-5: #5DA43F;
+    --chart-6: #5285DC;
+    --chart-grid: 39 41 62;
+    --chart-axis: 126 131 158;
+    --chart-good: #3AA98A;
+    --chart-warn: #D2A03C;
+    --chart-bad: #E5697D;
+    color-scheme: dark;
+  }
+
+  * { border-color: rgb(var(--c-line)); }
+
+  html, body, #root { height: 100%; }
+
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'tnum' 0;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: rgb(91 63 214 / 0.22); }
+
+  /* Focus visibility that survives every theme */
+  :focus-visible {
+    outline: 2px solid #6E56E4;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 { @apply text-ink font-semibold tracking-[-0.01em]; }
+
+  input, select, textarea, button { font: inherit; }
+  input[type='date'], input[type='time'] { min-height: 2.25rem; }
+
+  /* Slim scrollbars, theme aware */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--c-line-strong));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-faint)); background-clip: content-box; }
+}
+
+@layer components {
+  .card { @apply bg-surface border border-line rounded-xl shadow-card; }
+  .well { @apply bg-sunken border border-line rounded-lg; }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .hairline { @apply border-b border-line; }
+
+  /* Data table primitives shared by every module */
+  .dt { @apply w-full text-sm border-separate border-spacing-0; }
+  .dt thead th {
+    @apply sticky top-0 z-10 bg-sunken text-left text-2xs font-semibold uppercase
+           tracking-wider text-faint px-3 py-2.5 border-b border-line whitespace-nowrap;
+  }
+  .dt tbody td { @apply px-3 py-2.5 border-b border-line align-middle; }
+  .dt tbody tr:hover td { @apply bg-sunken/70; }
+  .dt tbody tr:last-child td { @apply border-b-0; }
+
+  .scroll-x { @apply overflow-x-auto overscroll-x-contain; -webkit-overflow-scrolling: touch; }
+
+  .skeleton { @apply relative overflow-hidden bg-line/70 rounded; }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(90deg, transparent, rgb(var(--c-surface) / 0.65), transparent);
+  }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
